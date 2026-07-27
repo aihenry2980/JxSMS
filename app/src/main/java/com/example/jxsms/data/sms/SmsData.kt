@@ -172,6 +172,15 @@ class SmsRepository(
     fun conversationMessages(): Flow<List<SmsMessageModel>> =
         observedMessages { source.conversationMessages() }
 
+    suspend fun inboxSnapshot(): List<SmsMessageModel> = source.inbox().map { sms ->
+        val contact = contacts.lookup(sms.address)
+        sms.copy(
+            contactName = contact?.displayName,
+            contactPhotoUri = contact?.photoUri,
+            category = classifier.classify(sms.address, sms.body, contact != null)
+        )
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun observedMessages(
         loader: suspend () -> List<SmsMessageModel>

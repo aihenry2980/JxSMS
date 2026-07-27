@@ -4,9 +4,11 @@ JX SMS Reader 是面向 Samsung Galaxy S26+（Android 16 / API 36）的个人离
 
 > **重要风险：当前版本只可靠支持普通 SMS，不解析 MMS、群组彩信或 RCS。设为默认短信应用后，这些消息可能无法正常显示。** `WAP_PUSH_DELIVER` 到达时应用会保守地记录事件并显示“不支持 MMS”通知，不会伪装成已保存。
 
-## 为什么必须成为默认短信应用
+## 默认短信应用与只读模式
 
-Android 只允许当前默认 SMS 应用写入和删除系统 Telephony SMS Provider。JX 的通知栏删除、应用垃圾箱、撤销及恢复都会更改 Provider，因此需要通过 `RoleManager.ROLE_SMS` 由用户主动授权。若 JX 不再是默认应用，收件箱仍可只读，但 UI 会进入受限模式并禁用滑动删除。
+为避免 MMS、群组彩信和 RCS 在 JX 不支持的情况下丢失，建议让 Samsung Messages 保持系统默认短信应用。JX 不再在首次启动或设置页提示、请求成为默认短信应用；获得 `READ_SMS` 权限后作为只读阅读器使用。
+
+Android 只允许当前默认 SMS 应用写入和删除系统 Telephony SMS Provider。因此 Samsung Messages 为默认时，JX 可以读取、搜索、分类和备份普通 SMS，但通知栏删除、标记已读、滑动删除、应用垃圾箱、撤销及恢复不可用，UI 会进入明确的只读受限模式。
 
 应用声明了系统默认 SMS 角色所需的 `SMS_DELIVER`、`WAP_PUSH_DELIVER`、`ACTION_SENDTO` 与 `RESPOND_VIA_MESSAGE` 组件。后两者只满足角色契约：外部发送 Intent 会明确显示“JX SMS Reader 不支持发送短信”，服务不会假装发送成功。
 
@@ -37,15 +39,41 @@ Android 只允许当前默认 SMS 应用写入和删除系统 Telephony SMS Prov
 
 启动图标为本地 VectorDrawable：深蓝背景、青蓝信封线条、白色信封主体和粗体 `JX`。`mipmap-anydpi-v26` 提供 Adaptive Icon，重要字样位于安全区；`ic_launcher_monochrome.xml` 支持 themed icon。各密度目录仍提供 launcher fallback，不依赖在线素材。
 
+## Email Backup
+
+“设置 → 邮件备份”会在设备本地读取收到的普通 SMS，按日期和现有分类筛选，执行隐私脱敏，再生成可全文搜索的纯文本邮件正文和 UTF-8 JSON 附件。默认包含真人、通知、快递和其他，排除广告与认证码；默认隐藏验证码及疑似银行卡、账户等长号码。JSON 默认也只保存脱敏正文；主动开启“保留未脱敏原文”时会先显示敏感信息警告。
+
+JX 不接入 Gmail API、OAuth、SMTP 或服务器，不读取 Google 账号或 Gmail 内容，也不需要网络权限。它只用 Android `ACTION_SEND` 和受限的 `FileProvider` URI 把收件人、标题、正文和附件交给 Gmail。最终必须由用户在 Gmail 中检查并手动点击“发送”。Android 无法可靠证明邮件是否已发送，因此从 Gmail 返回后，用户必须逐封选择“已发送”或“尚未发送”；只有所有分片都被手动确认后，该批次才会成为 `CONFIRMED_SENT`，并从“尚未备份”范围排除对应短信。
+
+每封默认最多 300 条短信，正文 UTF-8 大小默认不超过 200 KB。多封备份一次只打开一个分片，可在“备份记录”中继续未完成分片。删除本地备份记录只会删除 JX 的历史及相关缓存，不会删除短信、垃圾箱内容或 Gmail 邮件；删除已确认记录后，这些短信可能再次出现在“尚未备份”中。JSON 当前用于结构化归档和未来兼容，尚未实现从 JSON 恢复短信。
+
+Gmail 网页版搜索示例：
+
+```text
+subject:"JX SMS Backup"
+subject:"JX SMS Backup" 快递
+subject:"JX SMS Backup" CJ대한통운
+subject:"JX SMS Backup" "明天几点见"
+subject:"JX SMS Backup" after:2026/07/01 before:2026/08/01
+```
+
 ## Galaxy S26+ 安装与首次设置
 
 1. 在手机上打开“设置 → 关于手机 → 软件信息”，连续点击版本号启用开发者选项，再打开 USB 调试。
 2. 连接电脑并确认设备：`adb devices`。
 3. 构建后安装：`adb install -r app/build/outputs/apk/debug/app-debug.apk`。
-4. 启动 JX，阅读 MMS/RCS 警告并主动勾选确认。
-5. 点击“设为默认短信应用”，在系统角色对话框选择 JX。
-6. 角色授予后允许短信权限；联系人权限可以拒绝；需要通知时允许通知权限。
-7. 如需恢复原短信应用：手机“设置 → 应用 → 选择默认应用 → 短信应用”，重新选择 Samsung Messages 或原应用。
+4. 在手机“设置 → 应用 → 选择默认应用 → 短信应用”中确认 Samsung Messages 为默认。
+5. 启动 JX 并允许短信读取权限；联系人权限可以拒绝。
+6. JX 会以只读模式显示普通 SMS，不会请求成为默认短信应用。
+
+### Galaxy S26+ 邮件备份验收
+
+1. 打开“设置 → 邮件备份”，输入自己的邮箱，选择“最近7天”，排除广告和认证码并预览。
+2. 核对数量、分类、脱敏后的前 10 条短信和预计分片；生成后确认 Gmail 的收件人、标题、正文及 JSON 附件均已填写。
+3. 在 Gmail 中手动发送，返回 JX 后选择“已发送”；若有多封，逐封打开和确认。中途退出后从“备份记录”继续。
+4. 在 Gmail 网页版使用上面的标题、中文、韩文、联系人和 Sender 搜索示例验证正文可检索。
+5. 分别验证超过 300 条的拆分流程、Gmail 未安装时的系统选择器、拒绝联系人权限、验证码和长号码脱敏、JSON 原文警告、删除历史、App 重启、深色模式及大字体。
+6. 最后在系统应用权限中确认 JX 没有网络、Google 账号或存储权限。
 
 ## 手动验收
 

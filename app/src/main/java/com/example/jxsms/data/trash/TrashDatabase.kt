@@ -12,6 +12,12 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.jxsms.data.backup.EmailBackupBatchEntity
+import com.example.jxsms.data.backup.EmailBackupDao
+import com.example.jxsms.data.backup.EmailBackupMessageRefEntity
+import com.example.jxsms.data.backup.EmailBackupPartEntity
 import com.example.jxsms.domain.model.SmsCategory
 import kotlinx.coroutines.flow.Flow
 
@@ -56,15 +62,79 @@ interface TrashSmsDao {
     suspend fun deleteExpired(now: Long): Int
 }
 
-@Database(entities = [TrashSmsEntity::class], version = 1, exportSchema = false)
+@Database(
+    entities = [
+        TrashSmsEntity::class,
+        EmailBackupBatchEntity::class,
+        EmailBackupPartEntity::class,
+        EmailBackupMessageRefEntity::class
+    ],
+    version = 2,
+    exportSchema = false
+)
 abstract class SmsReaderDatabase : RoomDatabase() {
     abstract fun trashDao(): TrashSmsDao
+    abstract fun emailBackupDao(): EmailBackupDao
     companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `email_backup_batches` (" +
+                        "`backupId` TEXT NOT NULL, `recipient` TEXT NOT NULL, " +
+                        "`rangeStart` INTEGER NOT NULL, `rangeEnd` INTEGER NOT NULL, " +
+                        "`createdAt` INTEGER NOT NULL, `totalMessageCount` INTEGER NOT NULL, " +
+                        "`partCount` INTEGER NOT NULL, `settingsJson` TEXT NOT NULL, " +
+                        "`contentHash` TEXT NOT NULL, `status` TEXT NOT NULL, " +
+                        "PRIMARY KEY(`backupId`))"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_email_backup_batches_contentHash` " +
+                        "ON `email_backup_batches` (`contentHash`)"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `email_backup_parts` (" +
+                        "`partId` TEXT NOT NULL, `backupId` TEXT NOT NULL, " +
+                        "`partNumber` INTEGER NOT NULL, `messageCount` INTEGER NOT NULL, " +
+                        "`subject` TEXT NOT NULL, `bodyFileName` TEXT NOT NULL, " +
+                        "`attachmentFileName` TEXT NOT NULL, `bodySizeBytes` INTEGER NOT NULL, " +
+                        "`attachmentSizeBytes` INTEGER NOT NULL, `status` TEXT NOT NULL, " +
+                        "`confirmedAt` INTEGER, PRIMARY KEY(`partId`), " +
+                        "FOREIGN KEY(`backupId`) REFERENCES `email_backup_batches`(`backupId`) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_email_backup_parts_backupId` " +
+                        "ON `email_backup_parts` (`backupId`)"
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `email_backup_message_refs` (" +
+                        "`backupId` TEXT NOT NULL, `partId` TEXT NOT NULL, " +
+                        "`messageFingerprint` TEXT NOT NULL, `deviceSmsId` INTEGER, " +
+                        "`receivedAt` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`backupId`, `messageFingerprint`), " +
+                        "FOREIGN KEY(`backupId`) REFERENCES `email_backup_batches`(`backupId`) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_email_backup_message_refs_messageFingerprint` " +
+                        "ON `email_backup_message_refs` (`messageFingerprint`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_email_backup_message_refs_backupId` " +
+                        "ON `email_backup_message_refs` (`backupId`)"
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_email_backup_message_refs_partId` " +
+                        "ON `email_backup_message_refs` (`partId`)"
+                )
+            }
+        }
+
         @Volatile private var instance: SmsReaderDatabase? = null
         fun get(context: Context): SmsReaderDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(
                 context.applicationContext, SmsReaderDatabase::class.java, "jx_sms_reader.db"
-            ).build().also { instance = it }
+            ).addMigrations(MIGRATION_1_2).build().also { instance = it }
         }
     }
 }

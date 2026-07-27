@@ -109,6 +109,9 @@ import com.example.jxsms.domain.model.SwipeAction
 import com.example.jxsms.notification.SmsNotificationManager
 import com.example.jxsms.role.DefaultSmsRoleManager
 import com.example.jxsms.ui.AppViewModel
+import com.example.jxsms.ui.emailbackup.EmailBackupHistoryScreen
+import com.example.jxsms.ui.emailbackup.EmailBackupScreen
+import com.example.jxsms.ui.emailbackup.EmailBackupViewModel
 import com.example.jxsms.ui.theme.JxSMSTheme
 import com.example.jxsms.util.AvatarColorGenerator
 import com.example.jxsms.util.PhoneNumberNormalizer
@@ -120,17 +123,21 @@ import java.util.Date
 import kotlin.math.abs
 import kotlin.math.ceil
 
-private enum class Screen { INBOX, OTP, DETAIL, CONVERSATION, TRASH, SETTINGS, UNSUPPORTED }
+private enum class Screen {
+    INBOX, OTP, DETAIL, CONVERSATION, TRASH, SETTINGS,
+    EMAIL_BACKUP, EMAIL_BACKUP_HISTORY, UNSUPPORTED
+}
 private val LocalTagColors = staticCompositionLocalOf { DefaultTagColors }
 
 class MainActivity : ComponentActivity() {
     private val viewModel by viewModels<AppViewModel>()
+    private val emailBackupViewModel by viewModels<EmailBackupViewModel>()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             JxSMSTheme {
-                JxApp(viewModel, intent, onRoleChanged = { recreate() })
+                JxApp(viewModel, emailBackupViewModel, intent)
             }
         }
     }
@@ -138,7 +145,11 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun JxApp(vm: AppViewModel, launchIntent: Intent, onRoleChanged: () -> Unit) {
+private fun JxApp(
+    vm: AppViewModel,
+    emailBackupVm: EmailBackupViewModel,
+    launchIntent: Intent
+) {
     val context = LocalContext.current
     val role = remember { DefaultSmsRoleManager(context) }
     val prefs by vm.preferences.collectAsStateWithLifecycle()
@@ -153,10 +164,6 @@ private fun JxApp(vm: AppViewModel, launchIntent: Intent, onRoleChanged: () -> U
     var detailReturnScreen by rememberSaveable { mutableStateOf(Screen.INBOX) }
     val mergedInboxListState = rememberLazyListState()
     val unmergedInboxListState = rememberLazyListState()
-    val roleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-        isDefault = role.isDefault()
-        if (isDefault) onRoleChanged()
-    }
     val permissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { isDefault = role.isDefault() }
     BackHandler(enabled = screen != Screen.INBOX && screen != Screen.UNSUPPORTED) {
@@ -170,6 +177,8 @@ private fun JxApp(vm: AppViewModel, launchIntent: Intent, onRoleChanged: () -> U
                 screen = Screen.INBOX
             }
             Screen.OTP, Screen.TRASH, Screen.SETTINGS -> screen = Screen.INBOX
+            Screen.EMAIL_BACKUP -> screen = Screen.SETTINGS
+            Screen.EMAIL_BACKUP_HISTORY -> screen = Screen.EMAIL_BACKUP
             else -> Unit
         }
     }
@@ -177,17 +186,10 @@ private fun JxApp(vm: AppViewModel, launchIntent: Intent, onRoleChanged: () -> U
         UnsupportedSendScreen()
         return
     }
-    if (!prefs.riskAccepted) {
-        Onboarding(onRequest = {
-                vm.setRiskAccepted(true)
-                roleLauncher.launch(role.requestIntent())
-            })
-        return
-    }
-    LaunchedEffect(isDefault) {
-        if (isDefault) permissions.launch(arrayOf(
-            Manifest.permission.READ_SMS, Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_CONTACTS, Manifest.permission.POST_NOTIFICATIONS
+    LaunchedEffect(Unit) {
+        permissions.launch(arrayOf(
+            Manifest.permission.READ_SMS,
+            Manifest.permission.READ_CONTACTS
         ))
     }
     if (selectedId > 0 && screen == Screen.INBOX) screen = Screen.DETAIL
@@ -212,28 +214,20 @@ private fun JxApp(vm: AppViewModel, launchIntent: Intent, onRoleChanged: () -> U
                 })
             Screen.TRASH -> TrashScreen(vm, isDefault, onBack = { screen = Screen.INBOX })
             Screen.SETTINGS -> SettingsScreen(vm, isDefault, onBack = { screen = Screen.INBOX },
-                requestRole = { roleLauncher.launch(role.requestIntent()) })
+                emailBackupVm = emailBackupVm,
+                onCreateBackup = { screen = Screen.EMAIL_BACKUP },
+                onBackupHistory = { screen = Screen.EMAIL_BACKUP_HISTORY })
+            Screen.EMAIL_BACKUP -> EmailBackupScreen(
+                emailBackupVm,
+                onBack = { screen = Screen.SETTINGS },
+                onHistory = { screen = Screen.EMAIL_BACKUP_HISTORY }
+            )
+            Screen.EMAIL_BACKUP_HISTORY -> EmailBackupHistoryScreen(
+                emailBackupVm,
+                onBack = { screen = Screen.EMAIL_BACKUP },
+                onRegenerate = { screen = Screen.EMAIL_BACKUP }
+            )
             Screen.UNSUPPORTED -> UnsupportedSendScreen()
-        }
-    }
-}
-
-@Composable
-private fun Onboarding(onRequest: () -> Unit) {
-    var checked by rememberSaveable { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
-        Text("JX SMS Reader", style = MaterialTheme.typography.headlineMedium)
-        Spacer(Modifier.height(16.dp))
-        Text(stringResource(R.string.onboarding_reason))
-        Spacer(Modifier.height(12.dp))
-        Text(stringResource(R.string.onboarding_risk),
-            color = MaterialTheme.colorScheme.error)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked, onCheckedChange = { checked = it })
-            Text(stringResource(R.string.onboarding_accept), Modifier.clickable { checked = !checked })
-        }
-        Button(onClick = onRequest, enabled = checked, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.request_default))
         }
     }
 }
@@ -1070,9 +1064,18 @@ private fun TrashRow(item: TrashSmsEntity, canModify: Boolean, onRestore: () -> 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SettingsScreen(vm: AppViewModel, isDefault: Boolean, onBack: () -> Unit, requestRole: () -> Unit) {
+private fun SettingsScreen(
+    vm: AppViewModel,
+    isDefault: Boolean,
+    onBack: () -> Unit,
+    emailBackupVm: EmailBackupViewModel,
+    onCreateBackup: () -> Unit,
+    onBackupHistory: () -> Unit
+) {
     val context = LocalContext.current
     val prefs by vm.preferences.collectAsStateWithLifecycle()
+    val backupOptions by emailBackupVm.options.collectAsStateWithLifecycle()
+    val backupSummary by emailBackupVm.summary.collectAsStateWithLifecycle()
     var colorCategory by rememberSaveable { mutableStateOf<SmsCategory?>(null) }
     val localeManager = remember { context.getSystemService(LocaleManager::class.java) }
     val languageTag = localeManager.applicationLocales.toLanguageTags()
@@ -1086,9 +1089,6 @@ private fun SettingsScreen(vm: AppViewModel, isDefault: Boolean, onBack: () -> U
                 }
                 SettingLine(stringResource(R.string.default_sms_app),
                     stringResource(if (isDefault) R.string.default_set else R.string.default_not_set))
-                Button(onClick = requestRole, enabled = !isDefault) {
-                    Text(stringResource(R.string.request_default_long))
-                }
                 val contacts = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) ==
                     PackageManager.PERMISSION_GRANTED
                 SettingLine(stringResource(R.string.contacts_permission),
@@ -1125,6 +1125,34 @@ private fun SettingsScreen(vm: AppViewModel, isDefault: Boolean, onBack: () -> U
                 SmsCategory.entries.forEach { category ->
                     TagColorSetting(category, prefs.tagColors.getValue(category)) {
                         colorCategory = category
+                    }
+                }
+                Text(
+                    stringResource(R.string.email_backup_title),
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 2.dp)
+                )
+                SettingLine(
+                    stringResource(R.string.default_recipient),
+                    backupOptions.recipient.ifBlank { stringResource(R.string.not_set) }
+                )
+                SettingLine(
+                    stringResource(R.string.last_confirmed_backup),
+                    backupSummary.latestConfirmedAt?.let {
+                        DateFormat.getDateTimeInstance().format(Date(it))
+                    } ?: stringResource(R.string.none)
+                )
+                SettingLine(
+                    stringResource(R.string.confirmed_backup_messages),
+                    backupSummary.confirmedMessageCount.toString()
+                )
+                Row {
+                    Button(onClick = onCreateBackup) {
+                        Text(stringResource(R.string.create_email_backup))
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    TextButton(onClick = onBackupHistory) {
+                        Text(stringResource(R.string.backup_history))
                     }
                 }
                 SettingLine("MMS / RCS", stringResource(R.string.mms_unsupported_setting))
