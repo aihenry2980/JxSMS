@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">JX SMS Reader</string>
+    <string name="category_otp">認証コード</string><string name="category_ad">広告</string><string name="category_delivery">配送</string><string name="category_person">個人</string><string name="category_notice">通知</string><string name="category_other">その他</string>
+    <string name="action_delete">削除</string><string name="action_mark_toggle">既読/未読</string><string name="action_copy">メッセージをコピー</string><string name="action_none">操作なし</string>
+    <string name="back">戻る</string><string name="cancel">キャンセル</string><string name="confirm">確認</string><string name="current">現在</string><string name="change">変更</string>
+    <string name="onboarding_reason">通知からの削除、ゴミ箱、復元を利用するには、JXを既定のSMSアプリに設定する必要があります。</string>
+    <string name="onboarding_risk">重要：このバージョンは通常のSMSのみ対応し、MMS、グループMMS、RCSには対応していません。既定にすると、それらのメッセージを表示できない場合があります。</string>
+    <string name="onboarding_accept">MMS/RCSのリスクを理解し同意します</string><string name="request_default">既定のSMSアプリに設定</string>
+    <string name="inbox_title">メッセージ</string><string name="trash_title">ゴミ箱</string><string name="settings_title">設定</string>
+    <string name="restricted_mode">読み取り専用：JXは既定のSMSアプリではないため、削除と復元は無効です。</string>
+    <string name="search_sms">メッセージを検索</string><string name="search_hint">送信者、本文、カテゴリ</string><string name="no_messages">表示するメッセージはありません</string><string name="no_matches">一致するメッセージはありません</string>
+    <string name="message_count">%1$d件</string><string name="me_preview">自分：%1$s</string><string name="delete_count">%1$d件を削除</string>
+    <string name="delete_conversation_title">会話全体を削除しますか？</string><string name="delete_conversation_body">%1$sとのメッセージ%2$d件をゴミ箱へ移動します。</string>
+    <string name="bulk_delete_success">%1$d件をゴミ箱へ移動しました</string><string name="bulk_delete_partial">%1$d件を削除、%2$d件失敗</string>
+    <string name="moved_to_trash">ゴミ箱へ移動しました</string><string name="undo">元に戻す</string><string name="restore_failed">復元できませんでした</string><string name="delete_failed">削除に失敗し、メッセージは残っています</string><string name="copied">コピーしました</string>
+    <string name="conversation">会話</string><string name="empty_conversation">この会話にメッセージはありません</string>
+    <string name="detail_title">メッセージの詳細</string><string name="message_missing">メッセージが存在しないか削除されています</string><string name="tap_tag_hint">タグをタップしてカテゴリを変更</string>
+    <string name="received_time">受信日時：%1$s</string><string name="sent_time">送信日時：%1$s</string><string name="sim_status">SIM：%1$s · %2$s</string>
+    <string name="unknown">不明</string><string name="sent">送信済み</string><string name="read">既読</string><string name="unread">未読</string>
+    <string name="copy_body">本文をコピー</string><string name="mark_read">既読にする</string><string name="mark_unread">未読にする</string><string name="move_to_trash">ゴミ箱へ移動</string>
+    <string name="clear">空にする</string><string name="trash_empty">ゴミ箱は空です</string><string name="restore_failed_kept">復元に失敗しました。メッセージはゴミ箱に残っています。</string>
+    <string name="clear_trash_title">ゴミ箱を空にしますか？</string><string name="clear_trash_body">ゴミ箱内の全メッセージが完全に削除され、元に戻せません。</string>
+    <string name="permanent_delete_title">完全に削除しますか？</string><string name="permanent_delete_body">この操作は元に戻せません。</string>
+    <string name="deleted_days">%1$sに削除 · 残り%2$d日</string><string name="restore">復元</string><string name="permanent_delete">完全に削除</string>
+    <string name="default_sms_app">既定のSMSアプリ</string><string name="default_set">既定に設定済み</string><string name="default_not_set">既定ではありません</string><string name="request_default_long">既定のSMSアプリを要求</string>
+    <string name="contacts_permission">連絡先の権限</string><string name="notifications_permission">通知の権限</string><string name="granted">許可済み</string><string name="not_granted">未許可</string><string name="permission_settings">権限設定</string>
+    <string name="notification_delete_left">通知の削除ボタンを左に配置</string><string name="notification_order_delete_left">左：🔴 削除　右：✓ 既読</string><string name="notification_order_delete_right">左：✓ 既読　右：🔴 削除</string>
+    <string name="merge_sender">同じ送信者をまとめる</string><string name="merge_on">送信者ごとの会話にまとめる</string><string name="merge_off">SMSを1件ずつ表示</string>
+    <string name="left_swipe">左スワイプの操作</string><string name="right_swipe">右スワイプの操作</string>
+    <string name="trash_retention">30日間保存し、毎日自動整理</string><string name="sms_classification">メッセージ分類</string><string name="classification_detail">オフラインの中国語・韓国語・英語キーワード規則</string>
+    <string name="tag_colors">タグの色</string><string name="mms_unsupported_setting">MMS、グループMMS、RCSは未対応</string><string name="version">バージョン</string>
+    <string name="language">言語</string><string name="language_system">システムの既定</string><string name="language_zh_cn">中国語（簡体字）</string><string name="language_zh_tw">中国語（繁体字）</string><string name="language_ja">日本語</string><string name="language_en">英語</string><string name="language_ko">韓国語</string><string name="language_de">ドイツ語</string>
+    <string name="choose_tag_color">「%1$s」の色を選択</string><string name="change_category">メッセージのカテゴリを変更</string>
+    <string name="color_deep_blue">濃い青</string><string name="color_indigo">藍</string><string name="color_purple">紫</string><string name="color_rose">ローズ</string><string name="color_red">赤</string><string name="color_orange_brown">橙茶</string><string name="color_gold_brown">黄土</string><string name="color_green">緑</string><string name="color_teal">青緑</string><string name="color_dark_gray">濃い灰</string>
+    <string name="unsupported_send">JX SMS Readerはメッセージ送信に対応していません。</string><string name="clipboard_label">メッセージ本文</string>
+    <string name="channel_sms">新着メッセージ</string><string name="channel_warning">互換性の警告</string><string name="notification_delete">🔴 削除</string><string name="notification_mark_read">✓ 既読</string>
+    <string name="mms_warning_title">MMSは未対応です</string><string name="mms_warning_body">JX SMS Readerは現在、通常のSMSのみ対応しています。MMS対応のメッセージアプリに切り替えて確認してください。</string>
+</resources>

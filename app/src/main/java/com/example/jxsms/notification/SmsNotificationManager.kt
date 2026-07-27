@@ -28,10 +28,12 @@ class SmsNotificationManager(
 ) {
     fun createChannels() {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(
-            NotificationChannel(CHANNEL_SMS, "新短信", NotificationManager.IMPORTANCE_HIGH)
+            NotificationChannel(CHANNEL_SMS, context.getString(R.string.channel_sms),
+                NotificationManager.IMPORTANCE_HIGH)
         )
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(
-            NotificationChannel(CHANNEL_WARNING, "兼容性提醒", NotificationManager.IMPORTANCE_DEFAULT)
+            NotificationChannel(CHANNEL_WARNING, context.getString(R.string.channel_warning),
+                NotificationManager.IMPORTANCE_DEFAULT)
         )
     }
 
@@ -54,10 +56,11 @@ class SmsNotificationManager(
                 action = NotificationDeleteReceiver.ACTION_MARK_READ
                 putExtra(EXTRA_SMS_ID, sms.id)
             }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val redDeleteTitle = SpannableString("🔴 删除").apply {
+        val redDeleteTitle = SpannableString(context.getString(R.string.notification_delete)).apply {
             setSpan(ForegroundColorSpan(0xffc62828.toInt()), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
-        val title = "【${sms.category.label}】${sms.contactName ?: sms.address}"
+        val title = "【${context.getString(categoryStringRes(sms.category))}】${sms.contactName ?: sms.address}"
+        val markReadTitle = context.getString(R.string.notification_mark_read)
         val builder = NotificationCompat.Builder(context, CHANNEL_SMS)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title).setContentText(sms.body)
@@ -66,9 +69,9 @@ class SmsNotificationManager(
             .setAllowSystemGeneratedContextualActions(false)
         if (preferences.preferences.first().notificationDeleteOnLeft) {
             builder.addAction(0, redDeleteTitle, delete)
-                .addAction(0, "✓ 标为已读", markRead)
+                .addAction(0, markReadTitle, markRead)
         } else {
-            builder.addAction(0, "✓ 标为已读", markRead)
+            builder.addAction(0, markReadTitle, markRead)
                 .addAction(0, redDeleteTitle, delete)
         }
         val notification = builder.build()
@@ -80,9 +83,10 @@ class SmsNotificationManager(
     @SuppressLint("MissingPermission") // canNotify() guards POST_NOTIFICATIONS immediately below.
     fun notifyMmsUnsupported() {
         if (!canNotify()) return
-        val text = "JX SMS Reader 当前只支持普通 SMS。请切换到支持 MMS 的短信应用查看此类消息。"
+        val text = context.getString(R.string.mms_warning_body)
         val n = NotificationCompat.Builder(context, CHANNEL_WARNING)
-            .setSmallIcon(R.drawable.ic_notification).setContentTitle("暂不支持 MMS")
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(context.getString(R.string.mms_warning_title))
             .setContentText(text).setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setAutoCancel(true).build()
         try {
@@ -93,6 +97,14 @@ class SmsNotificationManager(
     fun cancel(smsId: Long) = NotificationManagerCompat.from(context).cancel(notificationId(smsId))
     private fun canNotify() = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
         PackageManager.PERMISSION_GRANTED
+    private fun categoryStringRes(category: SmsCategory) = when (category) {
+        SmsCategory.OTP -> R.string.category_otp
+        SmsCategory.ADVERTISEMENT -> R.string.category_ad
+        SmsCategory.DELIVERY -> R.string.category_delivery
+        SmsCategory.PERSON -> R.string.category_person
+        SmsCategory.NOTICE -> R.string.category_notice
+        SmsCategory.UNKNOWN -> R.string.category_other
+    }
 
     companion object {
         const val CHANNEL_SMS = "new_sms"

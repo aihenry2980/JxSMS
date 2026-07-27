@@ -123,8 +123,34 @@ class AndroidSmsDataSource(
     }
 
     override suspend fun delete(id: Long): Boolean = withContext(io) {
-        resolver.delete(ContentUris.withAppendedId(Telephony.Sms.CONTENT_URI, id), null, null) > 0
+        val itemUri = ContentUris.withAppendedId(Telephony.Sms.CONTENT_URI, id)
+        try {
+            resolver.delete(itemUri, null, null)
+            if (!smsExists(itemUri)) return@withContext true
+
+            // Some OEM providers (including Samsung builds) ignore the item URI
+            // or return an unreliable row count. Retry against the collection URI.
+            resolver.delete(
+                Telephony.Sms.CONTENT_URI,
+                "${Telephony.Sms._ID}=?",
+                arrayOf(id.toString())
+            )
+            !smsExists(itemUri)
+        } catch (_: SecurityException) {
+            false
+        } catch (_: IllegalArgumentException) {
+            false
+        }
     }
+
+    private fun smsExists(itemUri: Uri): Boolean =
+        resolver.query(
+            itemUri,
+            arrayOf(Telephony.Sms._ID),
+            null,
+            null,
+            null
+        )?.use { it.moveToFirst() } ?: true
 
     override suspend fun setRead(id: Long, read: Boolean): Boolean = withContext(io) {
         val values = ContentValues().apply {

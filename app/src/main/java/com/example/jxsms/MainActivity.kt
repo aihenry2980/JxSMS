@@ -2,6 +2,7 @@ package com.example.jxsms
 
 import android.Manifest
 import android.app.NotificationManager
+import android.app.LocaleManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -9,12 +10,14 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.LocaleList
 import android.provider.Telephony
 import android.provider.Settings
 import android.graphics.BitmapFactory
 import android.util.LruCache
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -41,6 +44,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -50,10 +54,12 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,16 +80,20 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.annotation.StringRes
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.Lifecycle
@@ -104,6 +114,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.util.Date
+import kotlin.math.abs
 import kotlin.math.ceil
 
 private enum class Screen { INBOX, DETAIL, CONVERSATION, TRASH, SETTINGS, UNSUPPORTED }
@@ -204,16 +215,16 @@ private fun Onboarding(onRequest: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
         Text("JX SMS Reader", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(16.dp))
-        Text("为了让通知栏删除、垃圾箱和恢复功能正常工作，JX 必须成为系统默认短信应用。")
+        Text(stringResource(R.string.onboarding_reason))
         Spacer(Modifier.height(12.dp))
-        Text("重要：当前版本只支持普通 SMS，不支持 MMS、群组彩信或 RCS。设为默认后，这些消息可能无法正常显示。",
+        Text(stringResource(R.string.onboarding_risk),
             color = MaterialTheme.colorScheme.error)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked, onCheckedChange = { checked = it })
-            Text("我已了解并接受 MMS/RCS 风险", Modifier.clickable { checked = !checked })
+            Text(stringResource(R.string.onboarding_accept), Modifier.clickable { checked = !checked })
         }
         Button(onClick = onRequest, enabled = checked, modifier = Modifier.fillMaxWidth()) {
-            Text("设为默认短信应用")
+            Text(stringResource(R.string.request_default))
         }
     }
 }
@@ -230,7 +241,14 @@ private fun InboxScreen(
     val snack = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val resources = LocalResources.current
+    val copiedText = stringResource(R.string.copied)
+    val movedText = stringResource(R.string.moved_to_trash)
+    val undoText = stringResource(R.string.undo)
+    val restoreFailedText = stringResource(R.string.restore_failed)
+    val deleteFailedText = stringResource(R.string.delete_failed)
     var query by rememberSaveable { mutableStateOf("") }
+    var deleteConversation by remember { mutableStateOf<ConversationGroup?>(null) }
     val displayedMessages = if (prefs.mergeConversations) conversationMessages else messages
     val filteredMessages = remember(displayedMessages, query) {
         val term = query.trim()
@@ -238,38 +256,56 @@ private fun InboxScreen(
             sms.address.contains(term, ignoreCase = true) ||
                 sms.contactName.orEmpty().contains(term, ignoreCase = true) ||
                 sms.body.contains(term, ignoreCase = true) ||
-                sms.category.label.contains(term, ignoreCase = true)
+                resources.getString(categoryStringRes(sms.category)).contains(term, ignoreCase = true)
         }
     }
     val conversations = remember(filteredMessages) {
         filteredMessages.groupBy { PhoneNumberNormalizer.normalize(it.address) }
-            .map { (senderKey, values) -> ConversationGroup(senderKey, values.first(), values.size) }
+            .map { (senderKey, values) -> ConversationGroup(senderKey, values) }
             .sortedByDescending { it.latest.date }
     }
+    val searchBackground = if (isSystemInDarkTheme()) Color(0xFF3A3D42) else Color(0xFFE5E7EB)
     Scaffold(
-        topBar = { TopAppBar(title = { Text("短信") }, actions = {
-            TextButton(onClick = onTrash) { Text("垃圾箱") }
-            TextButton(onClick = onSettings) { Text("设置") }
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.inbox_title)) }, actions = {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier.width(136.dp).height(48.dp),
+                singleLine = true,
+                placeholder = {
+                    Text(
+                        stringResource(R.string.search_sms),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = searchBackground,
+                    unfocusedContainerColor = searchBackground,
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent
+                )
+            )
+            TextButton(onClick = onTrash) { Text(stringResource(R.string.trash_title)) }
+            TextButton(onClick = onSettings) { Text(stringResource(R.string.settings_title)) }
         }) },
         snackbarHost = { SnackbarHost(snack) }
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
-            if (!isDefault) Text("受限只读模式：JX 当前不是默认短信应用，删除和恢复已禁用。",
+            if (!isDefault) Text(stringResource(R.string.restricted_mode),
                 Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.errorContainer).padding(10.dp))
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                singleLine = true,
-                label = { Text("搜索短信") },
-                placeholder = { Text("发信者、正文或分类") }
-            )
             if (filteredMessages.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(if (query.isBlank()) "没有可显示的短信" else "没有匹配的短信")
+                Text(stringResource(if (query.isBlank()) R.string.no_messages else R.string.no_matches))
             } else if (prefs.mergeConversations) {
                 LazyColumn {
                     items(conversations, key = { it.senderKey }) { conversation ->
-                        ConversationSummaryRow(conversation) { onConversation(conversation.senderKey) }
+                        SwipeConversationRow(
+                            group = conversation,
+                            enabled = isDefault,
+                            onOpen = { onConversation(conversation.senderKey) },
+                            onDeleteRequested = { deleteConversation = conversation }
+                        )
                     }
                 }
             } else {
@@ -282,18 +318,18 @@ private fun InboxScreen(
                                     SwipeAction.DELETE -> scope.launch {
                                         when (val result = vm.delete(sms.id)) {
                                             is TrashResult.Success -> {
-                                                val undo = snack.showSnackbar("已移入垃圾箱", "撤销")
+                                                val undo = snack.showSnackbar(movedText, undoText)
                                                 if (undo == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                                                    if (!vm.restore(result.trashId)) snack.showSnackbar("恢复失败")
+                                                    if (!vm.restore(result.trashId)) snack.showSnackbar(restoreFailedText)
                                                 }
                                             }
-                                            is TrashResult.Failure -> snack.showSnackbar(result.message)
+                                            is TrashResult.Failure -> snack.showSnackbar(deleteFailedText)
                                         }
                                     }
                                     SwipeAction.MARK_READ_UNREAD -> vm.markRead(sms.id, !sms.read)
                                     SwipeAction.COPY_TEXT -> {
                                         copyText(context, sms.body)
-                                        scope.launch { snack.showSnackbar("已复制") }
+                                        scope.launch { snack.showSnackbar(copiedText) }
                                     }
                                     SwipeAction.NONE -> Unit
                                 }
@@ -303,19 +339,99 @@ private fun InboxScreen(
             }
         }
     }
+    deleteConversation?.let { conversation ->
+        ConfirmDialog(
+            stringResource(R.string.delete_conversation_title),
+            stringResource(R.string.delete_conversation_body, conversation.displayName, conversation.count),
+            onDismiss = { deleteConversation = null },
+            onConfirm = {
+                deleteConversation = null
+                scope.launch {
+                    val trashIds = mutableListOf<Long>()
+                    var failed = 0
+                    conversation.messages.forEach { sms ->
+                        when (val result = vm.delete(sms.id)) {
+                            is TrashResult.Success -> trashIds += result.trashId
+                            is TrashResult.Failure -> failed++
+                        }
+                    }
+                    val message = if (failed == 0) {
+                        resources.getString(R.string.bulk_delete_success, trashIds.size)
+                    } else {
+                        resources.getString(R.string.bulk_delete_partial, trashIds.size, failed)
+                    }
+                    val undo = snack.showSnackbar(message, if (trashIds.isNotEmpty()) undoText else null)
+                    if (undo == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                        trashIds.forEach { vm.restore(it) }
+                    }
+                }
+            }
+        )
+    }
 }
 
 private data class ConversationGroup(
     val senderKey: String,
-    val latest: SmsMessageModel,
-    val count: Int
-)
+    val messages: List<SmsMessageModel>
+) {
+    val latest: SmsMessageModel get() = messages.first()
+    val count: Int get() = messages.size
+    val displayName: String get() = latest.contactName ?: latest.address
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeConversationRow(
+    group: ConversationGroup,
+    enabled: Boolean,
+    onOpen: () -> Unit,
+    onDeleteRequested: () -> Unit
+) {
+    var rowWidth by remember { mutableStateOf(0) }
+    val stateHolder = remember { arrayOfNulls<SwipeToDismissBoxState>(1) }
+    val state = rememberSwipeToDismissBoxState(
+        positionalThreshold = { totalDistance -> totalDistance * 0.40f },
+        confirmValueChange = {
+            val crossedThreshold = rowWidth > 0 &&
+                abs(stateHolder[0]?.requireOffset() ?: 0f) >= rowWidth * 0.40f
+            if (it != SwipeToDismissBoxValue.Settled && enabled && crossedThreshold) {
+                onDeleteRequested()
+            }
+            false
+        }
+    )
+    stateHolder[0] = state
+    SwipeToDismissBox(
+        modifier = Modifier.onSizeChanged { rowWidth = it.width },
+        state = state,
+        enableDismissFromStartToEnd = enabled,
+        enableDismissFromEndToStart = enabled,
+        backgroundContent = {
+            Box(
+                Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(horizontal = 22.dp),
+                contentAlignment = if (state.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                    Alignment.CenterEnd
+                } else {
+                    Alignment.CenterStart
+                }
+            ) {
+                Text(stringResource(R.string.delete_count, group.count),
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    fontWeight = FontWeight.Bold)
+            }
+        }
+    ) {
+        ConversationSummaryRow(group, onOpen)
+    }
+}
 
 @Composable
 private fun ConversationSummaryRow(group: ConversationGroup, onOpen: () -> Unit) {
     val sms = group.latest
+    val rowBackground = categoryRowBackground(sms.category)
     Column {
-        Row(Modifier.fillMaxWidth().background(categoryRowBackground(sms.category))
+        Row(Modifier.fillMaxWidth().background(rowBackground)
             .clickable(onClick = onOpen).padding(horizontal = 14.dp, vertical = 12.dp)) {
             Avatar(sms.contactName ?: sms.address, sms.contactPhotoUri)
             Spacer(Modifier.width(12.dp))
@@ -325,14 +441,15 @@ private fun ConversationSummaryRow(group: ConversationGroup, onOpen: () -> Unit)
                         fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     CategoryTag(sms.category)
                     Spacer(Modifier.width(7.dp))
-                    Text("${group.count} 条", style = MaterialTheme.typography.labelMedium)
+                    Text(stringResource(R.string.message_count, group.count),
+                        style = MaterialTheme.typography.labelMedium)
                 }
-                Text(if (sms.isOutgoing()) "我：${sms.body}" else sms.body,
+                Text(if (sms.isOutgoing()) stringResource(R.string.me_preview, sms.body) else sms.body,
                     maxLines = 2, overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Normal)
             }
         }
-        WavySmsDivider()
+        WavySmsDivider(rowBackground)
     }
 }
 
@@ -340,34 +457,49 @@ private fun ConversationSummaryRow(group: ConversationGroup, onOpen: () -> Unit)
 @Composable
 private fun SwipeRow(
     sms: SmsMessageModel, left: SwipeAction, right: SwipeAction, enabled: Boolean,
+    showOutgoingAvatar: Boolean = false,
     onOpen: () -> Unit, onAction: (SwipeAction) -> Unit
 ) {
+    var rowWidth by remember { mutableStateOf(0) }
+    val stateHolder = remember { arrayOfNulls<SwipeToDismissBoxState>(1) }
     val state = rememberSwipeToDismissBoxState(
+        positionalThreshold = { totalDistance -> totalDistance * 0.40f },
         confirmValueChange = {
             val action = if (it == SwipeToDismissBoxValue.EndToStart) left else right
-            if (it != SwipeToDismissBoxValue.Settled && enabled && action != SwipeAction.NONE) {
+            val crossedThreshold = rowWidth > 0 &&
+                abs(stateHolder[0]?.requireOffset() ?: 0f) >= rowWidth * 0.40f
+            if (it != SwipeToDismissBoxValue.Settled && enabled &&
+                action != SwipeAction.NONE && crossedThreshold
+            ) {
                 onAction(action); false
             } else false
         }
     )
-    SwipeToDismissBox(state = state, enableDismissFromStartToEnd = enabled,
+    stateHolder[0] = state
+    SwipeToDismissBox(
+        modifier = Modifier.onSizeChanged { rowWidth = it.width },
+        state = state,
+        enableDismissFromStartToEnd = enabled,
         enableDismissFromEndToStart = enabled,
         backgroundContent = {
             val action = if (state.dismissDirection == SwipeToDismissBoxValue.EndToStart) left else right
             Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer).padding(20.dp),
                 contentAlignment = if (state.dismissDirection == SwipeToDismissBoxValue.EndToStart)
-                    Alignment.CenterEnd else Alignment.CenterStart) { Text(action.label) }
-        }) { SmsRow(sms, onOpen) }
+                    Alignment.CenterEnd else Alignment.CenterStart) {
+                    Text(stringResource(swipeActionStringRes(action)))
+                }
+        }) { SmsRow(sms, onOpen, showOutgoingAvatar) }
 }
 
 @Composable
-private fun SmsRow(sms: SmsMessageModel, onOpen: () -> Unit) {
+private fun SmsRow(sms: SmsMessageModel, onOpen: () -> Unit, showOutgoingAvatar: Boolean = false) {
     val rowBackground = categoryRowBackground(sms.category)
     Column {
         Row(Modifier.fillMaxWidth()
             .background(rowBackground)
             .clickable(onClick = onOpen).padding(horizontal = 14.dp, vertical = 10.dp)) {
-            Avatar(sms.contactName ?: sms.address, sms.contactPhotoUri)
+            if (showOutgoingAvatar && sms.isOutgoing()) JxOutgoingAvatar()
+            else Avatar(sms.contactName ?: sms.address, sms.contactPhotoUri)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Row {
@@ -379,21 +511,20 @@ private fun SmsRow(sms: SmsMessageModel, onOpen: () -> Unit) {
                     Text(DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(sms.date)),
                         style = MaterialTheme.typography.labelSmall)
                 }
-                Text(if (sms.isOutgoing()) "我：${sms.body}" else sms.body,
+                Text(if (sms.isOutgoing()) stringResource(R.string.me_preview, sms.body) else sms.body,
                     maxLines = 3, overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Normal)
             }
         }
-        WavySmsDivider()
+        WavySmsDivider(rowBackground)
     }
 }
 
 @Composable
-private fun WavySmsDivider() {
-    val lineColor = if (isSystemInDarkTheme()) Color(0xFF9AA3AE) else Color(0xFF59636F)
-    val bandColor = MaterialTheme.colorScheme.surface
-    Canvas(Modifier.fillMaxWidth().height(12.dp).background(bandColor)) {
+private fun WavySmsDivider(backgroundColor: Color) {
+    val lineColor = if (isSystemInDarkTheme()) Color(0xFF777E87) else Color(0xFFB5BBC3)
+    Canvas(Modifier.fillMaxWidth().height(10.dp).background(backgroundColor)) {
         val amplitude = size.height * 0.32f
         val centerY = size.height / 2f
         val waveWidth = 30.dp.toPx()
@@ -439,13 +570,25 @@ private fun Avatar(label: String, photoUri: Uri? = null) {
 }
 
 @Composable
+private fun JxOutgoingAvatar() {
+    Box(
+        Modifier.size(44.dp).clip(CircleShape).background(Color(0xFFD9EEFF))
+            .border(1.5.dp, Color(0xFFE0B23C), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("JX", color = Color(0xFFB77900), fontWeight = FontWeight.ExtraBold)
+    }
+}
+
+@Composable
 private fun CategoryTag(category: SmsCategory, onClick: (() -> Unit)? = null) {
     val color = Color(LocalTagColors.current.getValue(category))
     var modifier = Modifier.clip(RoundedCornerShape(5.dp)).background(color)
         .padding(horizontal = 7.dp, vertical = 2.dp)
     if (onClick != null) modifier = modifier.clickable(onClick = onClick)
     Box(modifier) {
-        Text(category.label, color = Color.White, style = MaterialTheme.typography.labelSmall)
+        Text(stringResource(categoryStringRes(category)), color = Color.White,
+            style = MaterialTheme.typography.labelSmall)
     }
 }
 
@@ -463,42 +606,49 @@ private fun ConversationScreen(
     val messages = remember(allMessages, senderKey) {
         allMessages.filter { PhoneNumberNormalizer.normalize(it.address) == senderKey }
     }
-    val title = messages.firstOrNull()?.let { it.contactName ?: it.address } ?: "会话"
+    val title = messages.firstOrNull()?.let { it.contactName ?: it.address }
+        ?: stringResource(R.string.conversation)
     val snack = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val movedText = stringResource(R.string.moved_to_trash)
+    val undoText = stringResource(R.string.undo)
+    val restoreFailedText = stringResource(R.string.restore_failed)
+    val deleteFailedText = stringResource(R.string.delete_failed)
+    val copiedText = stringResource(R.string.copied)
     Scaffold(
         topBar = { TopAppBar(title = { Text(title) },
-            navigationIcon = { TextButton(onClick = onBack) { Text("返回") } }) },
+            navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.back)) } }) },
         snackbarHost = { SnackbarHost(snack) }
     ) { padding ->
         if (messages.isEmpty()) {
             Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("该会话没有短信")
+                Text(stringResource(R.string.empty_conversation))
             }
         } else {
             LazyColumn(Modifier.padding(padding)) {
                 items(messages, key = { it.id }) { sms ->
                     SwipeRow(sms, prefs.left, prefs.right, enabled = canModify,
+                        showOutgoingAvatar = true,
                         onOpen = { onOpen(sms.id) },
                         onAction = { action ->
                             when (action) {
                                 SwipeAction.DELETE -> scope.launch {
                                     when (val result = vm.delete(sms.id)) {
                                         is TrashResult.Success -> {
-                                            val undo = snack.showSnackbar("已移入垃圾箱", "撤销")
+                                            val undo = snack.showSnackbar(movedText, undoText)
                                             if (undo == androidx.compose.material3.SnackbarResult.ActionPerformed &&
                                                 !vm.restore(result.trashId)) {
-                                                snack.showSnackbar("恢复失败")
+                                                snack.showSnackbar(restoreFailedText)
                                             }
                                         }
-                                        is TrashResult.Failure -> snack.showSnackbar(result.message)
+                                        is TrashResult.Failure -> snack.showSnackbar(deleteFailedText)
                                     }
                                 }
                                 SwipeAction.MARK_READ_UNREAD -> vm.markRead(sms.id, !sms.read)
                                 SwipeAction.COPY_TEXT -> {
                                     copyText(context, sms.body)
-                                    scope.launch { snack.showSnackbar("已复制") }
+                                    scope.launch { snack.showSnackbar(copiedText) }
                                 }
                                 SwipeAction.NONE -> Unit
                             }
@@ -517,45 +667,68 @@ private fun DetailScreen(vm: AppViewModel, id: Long, canModify: Boolean, onBack:
     val snack = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val copiedText = stringResource(R.string.copied)
     var categoryOpen by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(id, canModify, sms?.type) {
         if (canModify && sms?.isOutgoing() == false) vm.markRead(id, true)
     }
-    Scaffold(topBar = { TopAppBar(title = { Text("短信详情") },
-        navigationIcon = { TextButton(onClick = onBack) { Text("返回") } }) },
+    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.detail_title)) },
+        navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.back)) } }) },
         snackbarHost = { SnackbarHost(snack) }) { padding ->
         if (sms == null) Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("短信不存在或已删除")
+            Text(stringResource(R.string.message_missing))
         } else Column(Modifier.padding(padding).padding(18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Avatar(sms.contactName ?: sms.address, sms.contactPhotoUri); Spacer(Modifier.width(12.dp))
-                Column { Text(sms.contactName ?: sms.address, fontWeight = FontWeight.Bold); Text(sms.address) }
+            val headerBackground =
+                if (isSystemInDarkTheme()) Color(0xFF34373C) else Color(0xFFE9EBEF)
+            Column(
+                Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(headerBackground)
+                    .padding(14.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Avatar(sms.contactName ?: sms.address, sms.contactPhotoUri)
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(sms.contactName ?: sms.address, fontWeight = FontWeight.Bold)
+                        Text(sms.address)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CategoryTag(sms.category) { categoryOpen = true }
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.tap_tag_hint), style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                val formattedTime = DateFormat.getDateTimeInstance().format(Date(sms.date))
+                Text(stringResource(
+                    if (sms.isOutgoing()) R.string.sent_time else R.string.received_time,
+                    formattedTime
+                ))
+                Text(stringResource(
+                    R.string.sim_status,
+                    sms.subscriptionId?.toString() ?: stringResource(R.string.unknown),
+                    stringResource(
+                        if (sms.isOutgoing()) R.string.sent else if (sms.read) R.string.read else R.string.unread
+                    )
+                ))
             }
-            Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                CategoryTag(sms.category) { categoryOpen = true }
-                Spacer(Modifier.width(8.dp))
-                Text("点击标签可更改分类", style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(18.dp))
+            SelectionContainer {
+                Text(sms.body, style = MaterialTheme.typography.bodyLarge)
             }
-            Text("${if (sms.isOutgoing()) "发送" else "收到"}时间：${
-                DateFormat.getDateTimeInstance().format(Date(sms.date))
-            }")
-            Text("SIM：${sms.subscriptionId?.toString() ?: "未知"} · ${
-                if (sms.isOutgoing()) "已发送" else if (sms.read) "已读" else "未读"
-            }")
-            Spacer(Modifier.height(18.dp)); Text(sms.body, style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.height(22.dp))
             Row {
-                TextButton(onClick = { copyText(context, sms.body); scope.launch { snack.showSnackbar("已复制") } }) {
-                    Text("复制正文")
+                TextButton(onClick = { copyText(context, sms.body); scope.launch { snack.showSnackbar(copiedText) } }) {
+                    Text(stringResource(R.string.copy_body))
                 }
                 TextButton(onClick = { vm.markRead(id, !sms.read) },
                     enabled = canModify && !sms.isOutgoing()) {
-                    Text(if (sms.read) "标为未读" else "标为已读")
+                    Text(stringResource(if (sms.read) R.string.mark_unread else R.string.mark_read))
                 }
                 TextButton(onClick = { scope.launch { vm.delete(id); onBack() } }, enabled = canModify) {
-                    Text("移入垃圾箱")
+                    Text(stringResource(R.string.move_to_trash))
                 }
             }
         }
@@ -580,24 +753,27 @@ private fun TrashScreen(vm: AppViewModel, canModify: Boolean, onBack: () -> Unit
     var deleteId by remember { mutableStateOf<Long?>(null) }
     val snack = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    Scaffold(topBar = { TopAppBar(title = { Text("垃圾箱") },
-        navigationIcon = { TextButton(onClick = onBack) { Text("返回") } },
+    val restoreFailedKept = stringResource(R.string.restore_failed_kept)
+    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.trash_title)) },
+        navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.back)) } },
         actions = { TextButton(onClick = { clearConfirm = true },
-            enabled = canModify && values.isNotEmpty()) { Text("清空") } }) },
+            enabled = canModify && values.isNotEmpty()) { Text(stringResource(R.string.clear)) } }) },
         snackbarHost = { SnackbarHost(snack) }) { padding ->
         if (values.isEmpty()) Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("垃圾箱为空")
+            Text(stringResource(R.string.trash_empty))
         } else LazyColumn(Modifier.padding(padding)) {
             items(values, key = { it.trashId }) { item ->
                 TrashRow(item, canModify, onRestore = {
-                    scope.launch { if (!vm.restore(item.trashId)) snack.showSnackbar("恢复失败，短信仍保留在垃圾箱") }
+                    scope.launch { if (!vm.restore(item.trashId)) snack.showSnackbar(restoreFailedKept) }
                 }, onDelete = { deleteId = item.trashId })
             }
         }
     }
-    if (clearConfirm) ConfirmDialog("清空垃圾箱？", "所有垃圾箱短信都会永久删除，操作无法撤销。",
+    if (clearConfirm) ConfirmDialog(stringResource(R.string.clear_trash_title),
+        stringResource(R.string.clear_trash_body),
         onDismiss = { clearConfirm = false }, onConfirm = { vm.clearTrash(); clearConfirm = false })
-    if (deleteId != null) ConfirmDialog("永久删除？", "永久删除后无法恢复。",
+    if (deleteId != null) ConfirmDialog(stringResource(R.string.permanent_delete_title),
+        stringResource(R.string.permanent_delete_body),
         onDismiss = { deleteId = null }, onConfirm = { vm.permanentDelete(deleteId!!); deleteId = null })
 }
 
@@ -610,11 +786,14 @@ private fun TrashRow(item: TrashSmsEntity, canModify: Boolean, onRestore: () -> 
             CategoryTag(item.category)
             Text(item.body, maxLines = 3, overflow = TextOverflow.Ellipsis)
             val days = ceil((item.expiresAt - System.currentTimeMillis()).coerceAtLeast(0) / 86_400_000.0).toInt()
-            Text("删除于 ${DateFormat.getDateInstance().format(Date(item.deletedAt))} · 剩余 $days 天",
+            Text(stringResource(R.string.deleted_days,
+                DateFormat.getDateInstance().format(Date(item.deletedAt)), days),
                 style = MaterialTheme.typography.labelSmall)
             Row {
-                TextButton(onClick = onRestore, enabled = canModify) { Text("恢复") }
-                TextButton(onClick = onDelete, enabled = canModify) { Text("永久删除") }
+                TextButton(onClick = onRestore, enabled = canModify) { Text(stringResource(R.string.restore)) }
+                TextButton(onClick = onDelete, enabled = canModify) {
+                    Text(stringResource(R.string.permanent_delete))
+                }
             }
         }
     }
@@ -627,45 +806,61 @@ private fun SettingsScreen(vm: AppViewModel, isDefault: Boolean, onBack: () -> U
     val context = LocalContext.current
     val prefs by vm.preferences.collectAsStateWithLifecycle()
     var colorCategory by rememberSaveable { mutableStateOf<SmsCategory?>(null) }
-    Scaffold(topBar = { TopAppBar(title = { Text("设置") },
-        navigationIcon = { TextButton(onClick = onBack) { Text("返回") } }) }) { padding ->
+    val localeManager = remember { context.getSystemService(LocaleManager::class.java) }
+    val languageTag = localeManager.applicationLocales.toLanguageTags()
+    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) },
+        navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.back)) } }) }) { padding ->
         LazyColumn(Modifier.padding(padding).padding(horizontal = 16.dp)) {
             item {
-                SettingLine("默认短信应用", if (isDefault) "已设为默认" else "未设为默认")
-                Button(onClick = requestRole, enabled = !isDefault) { Text("请求成为默认短信应用") }
+                LanguageSelector(languageTag) { tag ->
+                    localeManager.applicationLocales = if (tag.isEmpty()) LocaleList.getEmptyLocaleList()
+                    else LocaleList.forLanguageTags(tag)
+                }
+                SettingLine(stringResource(R.string.default_sms_app),
+                    stringResource(if (isDefault) R.string.default_set else R.string.default_not_set))
+                Button(onClick = requestRole, enabled = !isDefault) {
+                    Text(stringResource(R.string.request_default_long))
+                }
                 val contacts = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) ==
                     PackageManager.PERMISSION_GRANTED
-                SettingLine("联系人权限", if (contacts) "已授权" else "未授权")
-                TextButton(onClick = { openAppSettings(context) }) { Text("联系人权限设置") }
+                SettingLine(stringResource(R.string.contacts_permission),
+                    stringResource(if (contacts) R.string.granted else R.string.not_granted))
+                TextButton(onClick = { openAppSettings(context) }) {
+                    Text(stringResource(R.string.permission_settings))
+                }
                 val notifications = context.getSystemService(NotificationManager::class.java).areNotificationsEnabled()
-                SettingLine("通知权限", if (notifications) "已授权" else "未授权")
-                TextButton(onClick = { openNotificationSettings(context) }) { Text("通知权限设置") }
+                SettingLine(stringResource(R.string.notifications_permission),
+                    stringResource(if (notifications) R.string.granted else R.string.not_granted))
+                TextButton(onClick = { openNotificationSettings(context) }) {
+                    Text(stringResource(R.string.permission_settings))
+                }
                 SettingSwitch(
-                    "通知删除按钮在左侧",
-                    if (prefs.notificationDeleteOnLeft) "左：🔴 删除　右：✓ 标为已读"
-                    else "左：✓ 标为已读　右：🔴 删除",
+                    stringResource(R.string.notification_delete_left),
+                    stringResource(if (prefs.notificationDeleteOnLeft)
+                        R.string.notification_order_delete_left else R.string.notification_order_delete_right),
                     prefs.notificationDeleteOnLeft,
                     vm::setNotificationDeleteOnLeft
                 )
                 SettingSwitch(
-                    "合并同一发信者",
-                    if (prefs.mergeConversations) "Inbox 按发信者合并为会话" else "每条 SMS 独立显示",
+                    stringResource(R.string.merge_sender),
+                    stringResource(if (prefs.mergeConversations) R.string.merge_on else R.string.merge_off),
                     prefs.mergeConversations,
                     vm::setMergeConversations
                 )
-                SwipeSelector("左滑动作", prefs.left, vm::setLeft)
-                SwipeSelector("右滑动作", prefs.right, vm::setRight)
-                SettingLine("垃圾箱", "短信保留 30 天，每日自动清理")
-                SettingLine("短信分类", "使用离线、确定性的中韩英关键词规则")
-                Text("标签颜色", fontWeight = FontWeight.Bold,
+                SwipeSelector(stringResource(R.string.left_swipe), prefs.left, vm::setLeft)
+                SwipeSelector(stringResource(R.string.right_swipe), prefs.right, vm::setRight)
+                SettingLine(stringResource(R.string.trash_title), stringResource(R.string.trash_retention))
+                SettingLine(stringResource(R.string.sms_classification),
+                    stringResource(R.string.classification_detail))
+                Text(stringResource(R.string.tag_colors), fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 10.dp, bottom = 2.dp))
                 SmsCategory.entries.forEach { category ->
                     TagColorSetting(category, prefs.tagColors.getValue(category)) {
                         colorCategory = category
                     }
                 }
-                SettingLine("MMS 与 RCS", "当前不支持 MMS、群组彩信和 RCS")
-                SettingLine("版本", "JX SMS Reader 1.0")
+                SettingLine("MMS / RCS", stringResource(R.string.mms_unsupported_setting))
+                SettingLine(stringResource(R.string.version), "JX SMS Reader 1.0")
             }
         }
     }
@@ -683,16 +878,16 @@ private fun SettingsScreen(vm: AppViewModel, isDefault: Boolean, onBack: () -> U
 }
 
 private val TagColorPalette = listOf(
-    "深蓝" to 0xFF245A9A,
-    "靛蓝" to 0xFF3F51A3,
-    "紫色" to 0xFF60458F,
-    "玫红" to 0xFF9A365F,
-    "红色" to 0xFF9B3434,
-    "橙棕" to 0xFF9A4A20,
-    "金棕" to 0xFF80620E,
-    "绿色" to 0xFF276A43,
-    "青色" to 0xFF147078,
-    "深灰" to 0xFF515A66
+    R.string.color_deep_blue to 0xFF245A9A,
+    R.string.color_indigo to 0xFF3F51A3,
+    R.string.color_purple to 0xFF60458F,
+    R.string.color_rose to 0xFF9A365F,
+    R.string.color_red to 0xFF9B3434,
+    R.string.color_orange_brown to 0xFF9A4A20,
+    R.string.color_gold_brown to 0xFF80620E,
+    R.string.color_green to 0xFF276A43,
+    R.string.color_teal to 0xFF147078,
+    R.string.color_dark_gray to 0xFF515A66
 )
 
 @Composable
@@ -703,10 +898,11 @@ private fun TagColorSetting(category: SmsCategory, color: Long, onClick: () -> U
     ) {
         CategoryTag(category)
         Spacer(Modifier.width(12.dp))
-        Text(category.label, Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+        Text(stringResource(categoryStringRes(category)), Modifier.weight(1f),
+            fontWeight = FontWeight.SemiBold)
         Box(Modifier.size(26.dp).clip(CircleShape).background(Color(color)))
         Spacer(Modifier.width(8.dp))
-        Text("更改", color = MaterialTheme.colorScheme.primary)
+        Text(stringResource(R.string.change), color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -719,7 +915,8 @@ private fun TagColorPickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("选择“${category.label}”的颜色") },
+        title = { Text(stringResource(R.string.choose_tag_color,
+            stringResource(categoryStringRes(category)))) },
         text = {
             LazyColumn(Modifier.heightIn(max = 480.dp)) {
                 items(TagColorPalette, key = { it.second }) { (name, color) ->
@@ -729,14 +926,15 @@ private fun TagColorPickerDialog(
                     ) {
                         Box(Modifier.size(32.dp).clip(CircleShape).background(Color(color)))
                         Spacer(Modifier.width(12.dp))
-                        Text(name, Modifier.weight(1f))
-                        if (current == color) Text("当前", color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(name), Modifier.weight(1f))
+                        if (current == color) Text(stringResource(R.string.current),
+                            color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }
 
@@ -748,7 +946,7 @@ private fun CategoryPickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("更改短信分类") },
+        title = { Text(stringResource(R.string.change_category)) },
         text = {
             Column {
                 SmsCategory.entries.forEach { category ->
@@ -758,14 +956,15 @@ private fun CategoryPickerDialog(
                     ) {
                         CategoryTag(category)
                         Spacer(Modifier.width(12.dp))
-                        Text(category.label, Modifier.weight(1f))
-                        if (category == current) Text("当前", color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(categoryStringRes(category)), Modifier.weight(1f))
+                        if (category == current) Text(stringResource(R.string.current),
+                            color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }
 
@@ -773,10 +972,49 @@ private fun CategoryPickerDialog(
 private fun SwipeSelector(title: String, value: SwipeAction, onChange: (SwipeAction) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().clickable { open = true }.padding(vertical = 10.dp)) {
-        Text(title, Modifier.weight(1f)); Text(value.label)
+        Text(title, Modifier.weight(1f)); Text(stringResource(swipeActionStringRes(value)))
         DropdownMenu(open, onDismissRequest = { open = false }) {
             SwipeAction.entries.forEach { action ->
-                DropdownMenuItem(text = { Text(action.label) }, onClick = { onChange(action); open = false })
+                DropdownMenuItem(text = { Text(stringResource(swipeActionStringRes(action))) },
+                    onClick = { onChange(action); open = false })
+            }
+        }
+    }
+}
+
+private data class LanguageOption(val tag: String, @param:StringRes val label: Int)
+
+private val LanguageOptions = listOf(
+    LanguageOption("", R.string.language_system),
+    LanguageOption("zh-CN", R.string.language_zh_cn),
+    LanguageOption("zh-TW", R.string.language_zh_tw),
+    LanguageOption("ja", R.string.language_ja),
+    LanguageOption("en", R.string.language_en),
+    LanguageOption("ko", R.string.language_ko),
+    LanguageOption("de", R.string.language_de)
+)
+
+@Composable
+private fun LanguageSelector(currentTags: String, onChange: (String) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val current = LanguageOptions.firstOrNull {
+        it.tag.isNotEmpty() && currentTags.startsWith(it.tag, ignoreCase = true)
+    } ?: LanguageOptions.first()
+    Row(
+        Modifier.fillMaxWidth().clickable { open = true }.padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(stringResource(R.string.language), Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+        Text(stringResource(current.label))
+        DropdownMenu(open, onDismissRequest = { open = false }) {
+            LanguageOptions.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(option.label)) },
+                    onClick = {
+                        open = false
+                        onChange(option.tag)
+                    }
+                )
             }
         }
     }
@@ -804,19 +1042,19 @@ private fun SettingSwitch(title: String, detail: String, checked: Boolean, onChe
 @Composable
 private fun ConfirmDialog(title: String, body: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(onDismissRequest = onDismiss, title = { Text(title) }, text = { Text(body) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("确认") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } })
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.confirm)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } })
 }
 
 @Composable private fun UnsupportedSendScreen() {
     Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-        Text("JX SMS Reader 不支持发送短信。", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.unsupported_send), style = MaterialTheme.typography.headlineSmall)
     }
 }
 
 private fun copyText(context: Context, text: String) {
     context.getSystemService(ClipboardManager::class.java)
-        .setPrimaryClip(ClipData.newPlainText("短信正文", text))
+        .setPrimaryClip(ClipData.newPlainText(context.getString(R.string.clipboard_label), text))
 }
 private fun openAppSettings(context: Context) {
     context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -829,6 +1067,24 @@ private fun openNotificationSettings(context: Context) {
 
 private fun SmsMessageModel.isOutgoing(): Boolean =
     type == Telephony.Sms.MESSAGE_TYPE_SENT
+
+@StringRes
+private fun categoryStringRes(category: SmsCategory): Int = when (category) {
+    SmsCategory.OTP -> R.string.category_otp
+    SmsCategory.ADVERTISEMENT -> R.string.category_ad
+    SmsCategory.DELIVERY -> R.string.category_delivery
+    SmsCategory.PERSON -> R.string.category_person
+    SmsCategory.NOTICE -> R.string.category_notice
+    SmsCategory.UNKNOWN -> R.string.category_other
+}
+
+@StringRes
+private fun swipeActionStringRes(action: SwipeAction): Int = when (action) {
+    SwipeAction.DELETE -> R.string.action_delete
+    SwipeAction.MARK_READ_UNREAD -> R.string.action_mark_toggle
+    SwipeAction.COPY_TEXT -> R.string.action_copy
+    SwipeAction.NONE -> R.string.action_none
+}
 
 private object AvatarBitmapCache {
     private val cache = LruCache<String, android.graphics.Bitmap>(32)

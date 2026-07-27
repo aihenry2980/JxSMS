@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">JX SMS Reader</string>
+    <string name="category_otp">驗證碼</string><string name="category_ad">廣告</string><string name="category_delivery">快遞</string><string name="category_person">真人</string><string name="category_notice">通知</string><string name="category_other">其他</string>
+    <string name="action_delete">刪除</string><string name="action_mark_toggle">標記已讀/未讀</string><string name="action_copy">複製簡訊內容</string><string name="action_none">無操作</string>
+    <string name="back">返回</string><string name="cancel">取消</string><string name="confirm">確認</string><string name="current">目前</string><string name="change">更改</string>
+    <string name="onboarding_reason">為了讓通知列刪除、垃圾桶和還原功能正常運作，JX 必須成為系統預設簡訊應用程式。</string>
+    <string name="onboarding_risk">重要：目前版本只支援一般 SMS，不支援 MMS、群組多媒體訊息或 RCS。設為預設後，這些訊息可能無法正常顯示。</string>
+    <string name="onboarding_accept">我已瞭解並接受 MMS/RCS 風險</string><string name="request_default">設為預設簡訊應用程式</string>
+    <string name="inbox_title">簡訊</string><string name="trash_title">垃圾桶</string><string name="settings_title">設定</string>
+    <string name="restricted_mode">受限唯讀模式：JX 目前不是預設簡訊應用程式，刪除和還原已停用。</string>
+    <string name="search_sms">搜尋簡訊</string><string name="search_hint">寄件者、內文或分類</string><string name="no_messages">沒有可顯示的簡訊</string><string name="no_matches">沒有相符的簡訊</string>
+    <string name="message_count">%1$d 則</string><string name="me_preview">我：%1$s</string><string name="delete_count">刪除 %1$d 則</string>
+    <string name="delete_conversation_title">刪除整個對話？</string><string name="delete_conversation_body">將與 %1$s 的 %2$d 則簡訊移至垃圾桶。</string>
+    <string name="bulk_delete_success">已將 %1$d 則簡訊移至垃圾桶</string><string name="bulk_delete_partial">已刪除 %1$d 則，%2$d 則失敗</string>
+    <string name="moved_to_trash">已移至垃圾桶</string><string name="undo">復原</string><string name="restore_failed">還原失敗</string><string name="delete_failed">刪除失敗，簡訊未被移除</string><string name="copied">已複製</string>
+    <string name="conversation">對話</string><string name="empty_conversation">此對話沒有簡訊</string>
+    <string name="detail_title">簡訊詳細資料</string><string name="message_missing">簡訊不存在或已刪除</string><string name="tap_tag_hint">點選標籤可更改分類</string>
+    <string name="received_time">接收時間：%1$s</string><string name="sent_time">傳送時間：%1$s</string><string name="sim_status">SIM：%1$s · %2$s</string>
+    <string name="unknown">未知</string><string name="sent">已傳送</string><string name="read">已讀</string><string name="unread">未讀</string>
+    <string name="copy_body">複製內文</string><string name="mark_read">標為已讀</string><string name="mark_unread">標為未讀</string><string name="move_to_trash">移至垃圾桶</string>
+    <string name="clear">清空</string><string name="trash_empty">垃圾桶是空的</string><string name="restore_failed_kept">還原失敗，簡訊仍保留在垃圾桶</string>
+    <string name="clear_trash_title">清空垃圾桶？</string><string name="clear_trash_body">垃圾桶內所有簡訊都會永久刪除，且無法復原。</string>
+    <string name="permanent_delete_title">永久刪除？</string><string name="permanent_delete_body">永久刪除後無法還原。</string>
+    <string name="deleted_days">刪除於 %1$s · 剩餘 %2$d 天</string><string name="restore">還原</string><string name="permanent_delete">永久刪除</string>
+    <string name="default_sms_app">預設簡訊應用程式</string><string name="default_set">已設為預設</string><string name="default_not_set">未設為預設</string><string name="request_default_long">要求成為預設簡訊應用程式</string>
+    <string name="contacts_permission">聯絡人權限</string><string name="notifications_permission">通知權限</string><string name="granted">已授權</string><string name="not_granted">未授權</string><string name="permission_settings">權限設定</string>
+    <string name="notification_delete_left">通知刪除按鈕在左側</string><string name="notification_order_delete_left">左：🔴 刪除　右：✓ 標為已讀</string><string name="notification_order_delete_right">左：✓ 標為已讀　右：🔴 刪除</string>
+    <string name="merge_sender">合併相同寄件者</string><string name="merge_on">Inbox 依寄件者合併為對話</string><string name="merge_off">每則 SMS 獨立顯示</string>
+    <string name="left_swipe">向左滑動操作</string><string name="right_swipe">向右滑動操作</string>
+    <string name="trash_retention">簡訊保留 30 天，每日自動清理</string><string name="sms_classification">簡訊分類</string><string name="classification_detail">使用離線、確定性的中韓英關鍵字規則</string>
+    <string name="tag_colors">標籤顏色</string><string name="mms_unsupported_setting">目前不支援 MMS、群組多媒體訊息和 RCS</string><string name="version">版本</string>
+    <string name="language">語言</string><string name="language_system">跟隨系統</string><string name="language_zh_cn">中文（簡體）</string><string name="language_zh_tw">中文（繁體）</string><string name="language_ja">日本語</string><string name="language_en">English</string><string name="language_ko">한국어</string><string name="language_de">Deutsch</string>
+    <string name="choose_tag_color">選擇「%1$s」的顏色</string><string name="change_category">更改簡訊分類</string>
+    <string name="color_deep_blue">深藍</string><string name="color_indigo">靛藍</string><string name="color_purple">紫色</string><string name="color_rose">玫紅</string><string name="color_red">紅色</string><string name="color_orange_brown">橙棕</string><string name="color_gold_brown">金棕</string><string name="color_green">綠色</string><string name="color_teal">青色</string><string name="color_dark_gray">深灰</string>
+    <string name="unsupported_send">JX SMS Reader 不支援傳送簡訊。</string><string name="clipboard_label">簡訊內文</string>
+    <string name="channel_sms">新簡訊</string><string name="channel_warning">相容性提醒</string><string name="notification_delete">🔴 刪除</string><string name="notification_mark_read">✓ 標為已讀</string>
+    <string name="mms_warning_title">暫不支援 MMS</string><string name="mms_warning_body">JX SMS Reader 目前只支援一般 SMS。請切換到支援 MMS 的簡訊應用程式查看此類訊息。</string>
+</resources>

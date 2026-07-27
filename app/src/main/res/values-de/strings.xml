@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">JX SMS Reader</string>
+    <string name="category_otp">Code</string><string name="category_ad">Werbung</string><string name="category_delivery">Lieferung</string><string name="category_person">Person</string><string name="category_notice">Hinweis</string><string name="category_other">Sonstiges</string>
+    <string name="action_delete">Löschen</string><string name="action_mark_toggle">Gelesen/Ungelesen</string><string name="action_copy">Nachricht kopieren</string><string name="action_none">Keine Aktion</string>
+    <string name="back">Zurück</string><string name="cancel">Abbrechen</string><string name="confirm">Bestätigen</string><string name="current">Aktuell</string><string name="change">Ändern</string>
+    <string name="onboarding_reason">JX muss die Standard-SMS-App sein, damit Löschen aus Benachrichtigungen, Papierkorb und Wiederherstellung funktionieren.</string>
+    <string name="onboarding_risk">Wichtig: Diese Version unterstützt nur normale SMS, nicht MMS, Gruppen-MMS oder RCS. Nach der Auswahl als Standard werden solche Nachrichten möglicherweise nicht angezeigt.</string>
+    <string name="onboarding_accept">Ich verstehe und akzeptiere das MMS/RCS-Risiko</string><string name="request_default">Als Standard-SMS-App festlegen</string>
+    <string name="inbox_title">Nachrichten</string><string name="trash_title">Papierkorb</string><string name="settings_title">Einstellungen</string>
+    <string name="restricted_mode">Nur Lesen: JX ist nicht die Standard-SMS-App. Löschen und Wiederherstellen sind deaktiviert.</string>
+    <string name="search_sms">Nachrichten suchen</string><string name="search_hint">Absender, Text oder Kategorie</string><string name="no_messages">Keine Nachrichten</string><string name="no_matches">Keine passenden Nachrichten</string>
+    <string name="message_count">%1$d Nachrichten</string><string name="me_preview">Ich: %1$s</string><string name="delete_count">%1$d löschen</string>
+    <string name="delete_conversation_title">Ganze Unterhaltung löschen?</string><string name="delete_conversation_body">%2$d Nachrichten mit %1$s in den Papierkorb verschieben.</string>
+    <string name="bulk_delete_success">%1$d Nachrichten in den Papierkorb verschoben</string><string name="bulk_delete_partial">%1$d gelöscht, %2$d fehlgeschlagen</string>
+    <string name="moved_to_trash">In den Papierkorb verschoben</string><string name="undo">Rückgängig</string><string name="restore_failed">Wiederherstellung fehlgeschlagen</string><string name="delete_failed">Löschen fehlgeschlagen; Nachricht wurde nicht entfernt</string><string name="copied">Kopiert</string>
+    <string name="conversation">Unterhaltung</string><string name="empty_conversation">Keine Nachrichten in dieser Unterhaltung</string>
+    <string name="detail_title">Nachrichtendetails</string><string name="message_missing">Nachricht fehlt oder wurde gelöscht</string><string name="tap_tag_hint">Tag antippen, um die Kategorie zu ändern</string>
+    <string name="received_time">Empfangen: %1$s</string><string name="sent_time">Gesendet: %1$s</string><string name="sim_status">SIM: %1$s · %2$s</string>
+    <string name="unknown">Unbekannt</string><string name="sent">Gesendet</string><string name="read">Gelesen</string><string name="unread">Ungelesen</string>
+    <string name="copy_body">Text kopieren</string><string name="mark_read">Als gelesen markieren</string><string name="mark_unread">Als ungelesen markieren</string><string name="move_to_trash">In Papierkorb</string>
+    <string name="clear">Leeren</string><string name="trash_empty">Papierkorb ist leer</string><string name="restore_failed_kept">Wiederherstellung fehlgeschlagen; Nachricht bleibt im Papierkorb</string>
+    <string name="clear_trash_title">Papierkorb leeren?</string><string name="clear_trash_body">Alle Nachrichten werden endgültig gelöscht. Dies kann nicht rückgängig gemacht werden.</string>
+    <string name="permanent_delete_title">Endgültig löschen?</string><string name="permanent_delete_body">Diese Aktion kann nicht rückgängig gemacht werden.</string>
+    <string name="deleted_days">Gelöscht am %1$s · noch %2$d Tage</string><string name="restore">Wiederherstellen</string><string name="permanent_delete">Endgültig löschen</string>
+    <string name="default_sms_app">Standard-SMS-App</string><string name="default_set">Als Standard festgelegt</string><string name="default_not_set">Nicht Standard</string><string name="request_default_long">Standard-SMS-Rolle anfordern</string>
+    <string name="contacts_permission">Kontakte-Berechtigung</string><string name="notifications_permission">Benachrichtigungsberechtigung</string><string name="granted">Erteilt</string><string name="not_granted">Nicht erteilt</string><string name="permission_settings">Berechtigungen</string>
+    <string name="notification_delete_left">Löschen links in Benachrichtigung</string><string name="notification_order_delete_left">Links: 🔴 Löschen　Rechts: ✓ Gelesen</string><string name="notification_order_delete_right">Links: ✓ Gelesen　Rechts: 🔴 Löschen</string>
+    <string name="merge_sender">Gleichen Absender zusammenfassen</string><string name="merge_on">Nach Absender gruppieren</string><string name="merge_off">Jede SMS einzeln anzeigen</string>
+    <string name="left_swipe">Aktion beim Wischen nach links</string><string name="right_swipe">Aktion beim Wischen nach rechts</string>
+    <string name="trash_retention">30 Tage aufbewahren und täglich bereinigen</string><string name="sms_classification">Nachrichtenklassifizierung</string><string name="classification_detail">Offline-Regeln mit chinesischen, koreanischen und englischen Schlüsselwörtern</string>
+    <string name="tag_colors">Tag-Farben</string><string name="mms_unsupported_setting">MMS, Gruppen-MMS und RCS werden nicht unterstützt</string><string name="version">Version</string>
+    <string name="language">Sprache</string><string name="language_system">Systemstandard</string><string name="language_zh_cn">Chinesisch (vereinfacht)</string><string name="language_zh_tw">Chinesisch (traditionell)</string><string name="language_ja">Japanisch</string><string name="language_en">Englisch</string><string name="language_ko">Koreanisch</string><string name="language_de">Deutsch</string>
+    <string name="choose_tag_color">Farbe für „%1$s“ wählen</string><string name="change_category">Nachrichtenkategorie ändern</string>
+    <string name="color_deep_blue">Dunkelblau</string><string name="color_indigo">Indigo</string><string name="color_purple">Violett</string><string name="color_rose">Rosa</string><string name="color_red">Rot</string><string name="color_orange_brown">Orangebraun</string><string name="color_gold_brown">Ocker</string><string name="color_green">Grün</string><string name="color_teal">Petrol</string><string name="color_dark_gray">Dunkelgrau</string>
+    <string name="unsupported_send">JX SMS Reader unterstützt das Senden nicht.</string><string name="clipboard_label">Nachrichtentext</string>
+    <string name="channel_sms">Neue Nachrichten</string><string name="channel_warning">Kompatibilitätswarnungen</string><string name="notification_delete">🔴 Löschen</string><string name="notification_mark_read">✓ Gelesen</string>
+    <string name="mms_warning_title">MMS wird nicht unterstützt</string><string name="mms_warning_body">JX SMS Reader unterstützt derzeit nur normale SMS. Bitte zu einer MMS-fähigen Nachrichten-App wechseln.</string>
+</resources>

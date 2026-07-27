@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">JX SMS Reader</string>
+    <string name="category_otp">Code</string><string name="category_ad">Ad</string><string name="category_delivery">Delivery</string><string name="category_person">Person</string><string name="category_notice">Notice</string><string name="category_other">Other</string>
+    <string name="action_delete">Delete</string><string name="action_mark_toggle">Mark read/unread</string><string name="action_copy">Copy message</string><string name="action_none">No action</string>
+    <string name="back">Back</string><string name="cancel">Cancel</string><string name="confirm">Confirm</string><string name="current">Current</string><string name="change">Change</string>
+    <string name="onboarding_reason">JX must be the default SMS app for notification deletion, Trash, and restore to work.</string>
+    <string name="onboarding_risk">Important: this version only supports standard SMS, not MMS, group MMS, or RCS. Those messages may not display after making JX the default.</string>
+    <string name="onboarding_accept">I understand and accept the MMS/RCS risk</string><string name="request_default">Set as default SMS app</string>
+    <string name="inbox_title">Messages</string><string name="trash_title">Trash</string><string name="settings_title">Settings</string>
+    <string name="restricted_mode">Read-only mode: JX is not the default SMS app. Delete and restore are disabled.</string>
+    <string name="search_sms">Search messages</string><string name="search_hint">Sender, text, or category</string><string name="no_messages">No messages</string><string name="no_matches">No matching messages</string>
+    <string name="message_count">%1$d messages</string><string name="me_preview">Me: %1$s</string><string name="delete_count">Delete %1$d</string>
+    <string name="delete_conversation_title">Delete entire conversation?</string><string name="delete_conversation_body">Move %2$d messages with %1$s to Trash.</string>
+    <string name="bulk_delete_success">Moved %1$d messages to Trash</string><string name="bulk_delete_partial">Deleted %1$d; %2$d failed</string>
+    <string name="moved_to_trash">Moved to Trash</string><string name="undo">Undo</string><string name="restore_failed">Restore failed</string><string name="delete_failed">Delete failed; message was not removed</string><string name="copied">Copied</string>
+    <string name="conversation">Conversation</string><string name="empty_conversation">No messages in this conversation</string>
+    <string name="detail_title">Message details</string><string name="message_missing">Message missing or deleted</string><string name="tap_tag_hint">Tap the tag to change category</string>
+    <string name="received_time">Received: %1$s</string><string name="sent_time">Sent: %1$s</string><string name="sim_status">SIM: %1$s · %2$s</string>
+    <string name="unknown">Unknown</string><string name="sent">Sent</string><string name="read">Read</string><string name="unread">Unread</string>
+    <string name="copy_body">Copy text</string><string name="mark_read">Mark read</string><string name="mark_unread">Mark unread</string><string name="move_to_trash">Move to Trash</string>
+    <string name="clear">Clear</string><string name="trash_empty">Trash is empty</string><string name="restore_failed_kept">Restore failed; message remains in Trash</string>
+    <string name="clear_trash_title">Empty Trash?</string><string name="clear_trash_body">All messages in Trash will be permanently deleted. This cannot be undone.</string>
+    <string name="permanent_delete_title">Delete permanently?</string><string name="permanent_delete_body">This action cannot be undone.</string>
+    <string name="deleted_days">Deleted %1$s · %2$d days left</string><string name="restore">Restore</string><string name="permanent_delete">Delete permanently</string>
+    <string name="default_sms_app">Default SMS app</string><string name="default_set">Set as default</string><string name="default_not_set">Not default</string><string name="request_default_long">Request default SMS role</string>
+    <string name="contacts_permission">Contacts permission</string><string name="notifications_permission">Notification permission</string><string name="granted">Granted</string><string name="not_granted">Not granted</string><string name="permission_settings">Permission settings</string>
+    <string name="notification_delete_left">Delete action on the left</string><string name="notification_order_delete_left">Left: 🔴 Delete　Right: ✓ Mark read</string><string name="notification_order_delete_right">Left: ✓ Mark read　Right: 🔴 Delete</string>
+    <string name="merge_sender">Merge same sender</string><string name="merge_on">Group Inbox by sender</string><string name="merge_off">Show each SMS separately</string>
+    <string name="left_swipe">Swipe left action</string><string name="right_swipe">Swipe right action</string>
+    <string name="trash_retention">Messages are kept for 30 days and cleaned daily</string><string name="sms_classification">Message classification</string><string name="classification_detail">Offline deterministic Chinese, Korean, and English keyword rules</string>
+    <string name="tag_colors">Tag colors</string><string name="mms_unsupported_setting">MMS, group MMS, and RCS are not supported</string><string name="version">Version</string>
+    <string name="language">Language</string><string name="language_system">System default</string><string name="language_zh_cn">Chinese (Simplified)</string><string name="language_zh_tw">Chinese (Traditional)</string><string name="language_ja">Japanese</string><string name="language_en">English</string><string name="language_ko">Korean</string><string name="language_de">German</string>
+    <string name="choose_tag_color">Choose a color for “%1$s”</string><string name="change_category">Change message category</string>
+    <string name="color_deep_blue">Deep blue</string><string name="color_indigo">Indigo</string><string name="color_purple">Purple</string><string name="color_rose">Rose</string><string name="color_red">Red</string><string name="color_orange_brown">Burnt orange</string><string name="color_gold_brown">Ochre</string><string name="color_green">Green</string><string name="color_teal">Teal</string><string name="color_dark_gray">Dark gray</string>
+    <string name="unsupported_send">JX SMS Reader does not support sending messages.</string><string name="clipboard_label">Message text</string>
+    <string name="channel_sms">New messages</string><string name="channel_warning">Compatibility alerts</string><string name="notification_delete">🔴 Delete</string><string name="notification_mark_read">✓ Mark read</string>
+    <string name="mms_warning_title">MMS is not supported</string><string name="mms_warning_body">JX SMS Reader currently supports standard SMS only. Switch to an MMS-capable messaging app to view this message.</string>
+</resources>
