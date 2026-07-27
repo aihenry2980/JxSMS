@@ -36,4 +36,12 @@
     <string name="unsupported_send">JX SMS Reader does not support sending messages.</string><string name="clipboard_label">Message text</string>
     <string name="channel_sms">New messages</string><string name="channel_warning">Compatibility alerts</string><string name="notification_delete">🔴 Delete</string><string name="notification_mark_read">✓ Mark read</string>
     <string name="mms_warning_title">MMS is not supported</string><string name="mms_warning_body">JX SMS Reader currently supports standard SMS only. Switch to an MMS-capable messaging app to view this message.</string>
+    <string name="otp_inbox">Verification codes</string>
+    <string name="otp_empty">No verification-code messages</string>
+    <string name="select_all">Select all</string>
+    <string name="clear_selection">Clear selection</string>
+    <string name="delete_selected">Delete (%1$d)</string>
+    <string name="selected_count">%1$d selected</string>
+    <string name="delete_selected_title">Delete selected codes?</string>
+    <string name="delete_selected_body">Move the selected %1$d verification-code messages to Trash.</string>
 </resources>

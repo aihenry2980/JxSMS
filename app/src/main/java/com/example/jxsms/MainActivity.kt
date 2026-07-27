@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -41,7 +42,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -117,7 +120,7 @@ import java.util.Date
 import kotlin.math.abs
 import kotlin.math.ceil
 
-private enum class Screen { INBOX, DETAIL, CONVERSATION, TRASH, SETTINGS, UNSUPPORTED }
+private enum class Screen { INBOX, OTP, DETAIL, CONVERSATION, TRASH, SETTINGS, UNSUPPORTED }
 private val LocalTagColors = staticCompositionLocalOf { DefaultTagColors }
 
 class MainActivity : ComponentActivity() {
@@ -148,6 +151,8 @@ private fun JxApp(vm: AppViewModel, launchIntent: Intent, onRoleChanged: () -> U
     }
     var selectedSender by rememberSaveable { mutableStateOf("") }
     var detailReturnScreen by rememberSaveable { mutableStateOf(Screen.INBOX) }
+    val mergedInboxListState = rememberLazyListState()
+    val unmergedInboxListState = rememberLazyListState()
     val roleLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         isDefault = role.isDefault()
         if (isDefault) onRoleChanged()
@@ -164,7 +169,7 @@ private fun JxApp(vm: AppViewModel, launchIntent: Intent, onRoleChanged: () -> U
                 selectedSender = ""
                 screen = Screen.INBOX
             }
-            Screen.TRASH, Screen.SETTINGS -> screen = Screen.INBOX
+            Screen.OTP, Screen.TRASH, Screen.SETTINGS -> screen = Screen.INBOX
             else -> Unit
         }
     }
@@ -189,9 +194,13 @@ private fun JxApp(vm: AppViewModel, launchIntent: Intent, onRoleChanged: () -> U
     CompositionLocalProvider(LocalTagColors provides prefs.tagColors) {
         when (screen) {
             Screen.INBOX -> InboxScreen(vm, isDefault,
+                mergedListState = mergedInboxListState,
+                unmergedListState = unmergedInboxListState,
+                onOtp = { screen = Screen.OTP },
                 onTrash = { screen = Screen.TRASH }, onSettings = { screen = Screen.SETTINGS },
                 onOpen = { selectedId = it; detailReturnScreen = Screen.INBOX; screen = Screen.DETAIL },
                 onConversation = { selectedSender = it; screen = Screen.CONVERSATION })
+            Screen.OTP -> OtpScreen(vm, isDefault, onBack = { screen = Screen.INBOX })
             Screen.DETAIL -> DetailScreen(vm, selectedId, isDefault,
                 onBack = { selectedId = -1; screen = detailReturnScreen })
             Screen.CONVERSATION -> ConversationScreen(vm, selectedSender, isDefault,
@@ -233,7 +242,10 @@ private fun Onboarding(onRequest: () -> Unit) {
 @Composable
 private fun InboxScreen(
     vm: AppViewModel, isDefault: Boolean, onTrash: () -> Unit,
-    onSettings: () -> Unit, onOpen: (Long) -> Unit, onConversation: (String) -> Unit
+    mergedListState: LazyListState,
+    unmergedListState: LazyListState,
+    onOtp: () -> Unit, onSettings: () -> Unit,
+    onOpen: (Long) -> Unit, onConversation: (String) -> Unit
 ) {
     val messages by vm.messages.collectAsStateWithLifecycle()
     val conversationMessages by vm.conversationMessages.collectAsStateWithLifecycle()
@@ -267,16 +279,20 @@ private fun InboxScreen(
     val searchBackground = if (isSystemInDarkTheme()) Color(0xFF3A3D42) else Color(0xFFE5E7EB)
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.inbox_title)) }, actions = {
+            CategoryTag(SmsCategory.OTP, onClick = onOtp)
+            Spacer(Modifier.width(4.dp))
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                modifier = Modifier.width(136.dp).height(48.dp),
+                modifier = Modifier.width(112.dp).height(48.dp),
                 singleLine = true,
+                textStyle = MaterialTheme.typography.bodySmall,
                 placeholder = {
                     Text(
                         stringResource(R.string.search_sms),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelSmall
                     )
                 },
                 shape = RoundedCornerShape(12.dp),
@@ -298,42 +314,46 @@ private fun InboxScreen(
             if (filteredMessages.isEmpty()) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(stringResource(if (query.isBlank()) R.string.no_messages else R.string.no_matches))
             } else if (prefs.mergeConversations) {
-                LazyColumn {
-                    items(conversations, key = { it.senderKey }) { conversation ->
-                        SwipeConversationRow(
-                            group = conversation,
-                            enabled = isDefault,
-                            onOpen = { onConversation(conversation.senderKey) },
-                            onDeleteRequested = { deleteConversation = conversation }
-                        )
+                ScrollableSmsList(mergedListState) {
+                    LazyColumn(state = mergedListState, modifier = Modifier.fillMaxSize()) {
+                        items(conversations, key = { it.senderKey }) { conversation ->
+                            SwipeConversationRow(
+                                group = conversation,
+                                enabled = isDefault,
+                                onOpen = { onConversation(conversation.senderKey) },
+                                onDeleteRequested = { deleteConversation = conversation }
+                            )
+                        }
                     }
                 }
             } else {
-                LazyColumn {
-                    items(filteredMessages, key = { it.id }) { sms ->
-                        SwipeRow(sms, prefs.left, prefs.right, enabled = isDefault,
-                            onOpen = { onOpen(sms.id) },
-                            onAction = { action ->
-                                when (action) {
-                                    SwipeAction.DELETE -> scope.launch {
-                                        when (val result = vm.delete(sms.id)) {
-                                            is TrashResult.Success -> {
-                                                val undo = snack.showSnackbar(movedText, undoText)
-                                                if (undo == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                                                    if (!vm.restore(result.trashId)) snack.showSnackbar(restoreFailedText)
+                ScrollableSmsList(unmergedListState) {
+                    LazyColumn(state = unmergedListState, modifier = Modifier.fillMaxSize()) {
+                        items(filteredMessages, key = { it.id }) { sms ->
+                            SwipeRow(sms, prefs.left, prefs.right, enabled = isDefault,
+                                onOpen = { onOpen(sms.id) },
+                                onAction = { action ->
+                                    when (action) {
+                                        SwipeAction.DELETE -> scope.launch {
+                                            when (val result = vm.delete(sms.id)) {
+                                                is TrashResult.Success -> {
+                                                    val undo = snack.showSnackbar(movedText, undoText)
+                                                    if (undo == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                                                        if (!vm.restore(result.trashId)) snack.showSnackbar(restoreFailedText)
+                                                    }
                                                 }
+                                                is TrashResult.Failure -> snack.showSnackbar(deleteFailedText)
                                             }
-                                            is TrashResult.Failure -> snack.showSnackbar(deleteFailedText)
                                         }
+                                        SwipeAction.MARK_READ_UNREAD -> vm.markRead(sms.id, !sms.read)
+                                        SwipeAction.COPY_TEXT -> {
+                                            copyText(context, sms.body)
+                                            scope.launch { snack.showSnackbar(copiedText) }
+                                        }
+                                        SwipeAction.NONE -> Unit
                                     }
-                                    SwipeAction.MARK_READ_UNREAD -> vm.markRead(sms.id, !sms.read)
-                                    SwipeAction.COPY_TEXT -> {
-                                        copyText(context, sms.body)
-                                        scope.launch { snack.showSnackbar(copiedText) }
-                                    }
-                                    SwipeAction.NONE -> Unit
-                                }
-                            })
+                                })
+                        }
                     }
                 }
             }
@@ -444,9 +464,14 @@ private fun ConversationSummaryRow(group: ConversationGroup, onOpen: () -> Unit)
                     Text(stringResource(R.string.message_count, group.count),
                         style = MaterialTheme.typography.labelMedium)
                 }
-                Text(if (sms.isOutgoing()) stringResource(R.string.me_preview, sms.body) else sms.body,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Normal)
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(if (sms.isOutgoing()) stringResource(R.string.me_preview, sms.body) else sms.body,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Normal)
+                    Spacer(Modifier.width(8.dp))
+                    MessageDateTime(sms.date)
+                }
             }
         }
         WavySmsDivider(rowBackground)
@@ -507,18 +532,31 @@ private fun SmsRow(sms: SmsMessageModel, onOpen: () -> Unit, showOutgoingAvatar:
                         fontWeight = FontWeight.Bold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                     CategoryTag(sms.category)
-                    Spacer(Modifier.width(7.dp))
-                    Text(DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(sms.date)),
-                        style = MaterialTheme.typography.labelSmall)
                 }
-                Text(if (sms.isOutgoing()) stringResource(R.string.me_preview, sms.body) else sms.body,
-                    maxLines = 3, overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Normal)
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(if (sms.isOutgoing()) stringResource(R.string.me_preview, sms.body) else sms.body,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 3, overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Normal)
+                    Spacer(Modifier.width(8.dp))
+                    MessageDateTime(sms.date)
+                }
             }
         }
         WavySmsDivider(rowBackground)
     }
+}
+
+@Composable
+private fun MessageDateTime(timestamp: Long) {
+    Text(
+        DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+            .format(Date(timestamp)),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1
+    )
 }
 
 @Composable
@@ -538,6 +576,41 @@ private fun WavySmsDivider(backgroundColor: Color) {
             }
         }
         drawPath(path, color = lineColor, style = androidx.compose.ui.graphics.drawscope.Stroke(2.25.dp.toPx()))
+    }
+}
+
+@Composable
+private fun ScrollableSmsList(
+    state: LazyListState,
+    content: @Composable () -> Unit
+) {
+    Box(Modifier.fillMaxSize()) {
+        content()
+        val layout = state.layoutInfo
+        val totalItems = layout.totalItemsCount
+        val visibleItems = layout.visibleItemsInfo.size
+        if (totalItems > visibleItems && visibleItems > 0) {
+            val availableSteps = (totalItems - visibleItems).coerceAtLeast(1)
+            val scrollFraction =
+                (state.firstVisibleItemIndex.toFloat() / availableSteps).coerceIn(0f, 1f)
+            Canvas(
+                Modifier.align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .width(5.dp)
+                    .padding(vertical = 4.dp)
+            ) {
+                val thumbHeight =
+                    (size.height * visibleItems.toFloat() / totalItems).coerceAtLeast(28.dp.toPx())
+                        .coerceAtMost(size.height)
+                val thumbTop = (size.height - thumbHeight) * scrollFraction
+                drawRoundRect(
+                    color = Color(0xFF7C848E).copy(alpha = 0.65f),
+                    topLeft = androidx.compose.ui.geometry.Offset(0f, thumbTop),
+                    size = androidx.compose.ui.geometry.Size(size.width, thumbHeight),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width / 2f)
+                )
+            }
+        }
     }
 }
 
@@ -656,6 +729,201 @@ private fun ConversationScreen(
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OtpScreen(
+    vm: AppViewModel,
+    canModify: Boolean,
+    onBack: () -> Unit
+) {
+    val allMessages by vm.conversationMessages.collectAsStateWithLifecycle()
+    val otpMessages = remember(allMessages) {
+        allMessages.filter { it.category == SmsCategory.OTP }
+    }
+    val listState = rememberLazyListState()
+    var selectedIds by remember { mutableStateOf(emptySet<Long>()) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    val snack = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val resources = LocalResources.current
+    val undoText = stringResource(R.string.undo)
+    val restoreFailedText = stringResource(R.string.restore_failed)
+
+    LaunchedEffect(otpMessages) {
+        val availableIds = otpMessages.mapTo(mutableSetOf()) { it.id }
+        selectedIds = selectedIds.intersect(availableIds)
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.otp_inbox)) },
+                navigationIcon = {
+                    TextButton(onClick = onBack) { Text(stringResource(R.string.back)) }
+                }
+            )
+        },
+        snackbarHost = { SnackbarHost(snack) }
+    ) { padding ->
+        if (otpMessages.isEmpty()) {
+            Box(
+                Modifier.padding(padding).fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(stringResource(R.string.otp_empty))
+            }
+        } else {
+            Column(Modifier.padding(padding).fillMaxSize()) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        stringResource(R.string.selected_count, selectedIds.size),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    TextButton(
+                        onClick = {
+                            selectedIds = if (selectedIds.size == otpMessages.size) {
+                                emptySet()
+                            } else {
+                                otpMessages.mapTo(mutableSetOf()) { it.id }
+                            }
+                        },
+                        enabled = canModify
+                    ) {
+                        Text(stringResource(
+                            if (selectedIds.size == otpMessages.size) {
+                                R.string.clear_selection
+                            } else {
+                                R.string.select_all
+                            }
+                        ))
+                    }
+                    TextButton(
+                        onClick = { confirmDelete = true },
+                        enabled = canModify && selectedIds.isNotEmpty()
+                    ) {
+                        Text(
+                            stringResource(R.string.delete_selected, selectedIds.size),
+                            color = if (canModify && selectedIds.isNotEmpty()) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            }
+                        )
+                    }
+                }
+                ScrollableSmsList(listState) {
+                    LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                        items(otpMessages, key = { it.id }) { sms ->
+                            SelectableOtpRow(
+                                sms = sms,
+                                selected = sms.id in selectedIds,
+                                enabled = canModify,
+                                onToggle = {
+                                    selectedIds = if (sms.id in selectedIds) {
+                                        selectedIds - sms.id
+                                    } else {
+                                        selectedIds + sms.id
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (confirmDelete) {
+        ConfirmDialog(
+            title = stringResource(R.string.delete_selected_title),
+            body = stringResource(R.string.delete_selected_body, selectedIds.size),
+            onDismiss = { confirmDelete = false },
+            onConfirm = {
+                confirmDelete = false
+                val idsToDelete = selectedIds.toList()
+                selectedIds = emptySet()
+                scope.launch {
+                    val trashIds = mutableListOf<Long>()
+                    var failed = 0
+                    idsToDelete.forEach { id ->
+                        when (val result = vm.delete(id)) {
+                            is TrashResult.Success -> trashIds += result.trashId
+                            is TrashResult.Failure -> failed++
+                        }
+                    }
+                    val message = if (failed == 0) {
+                        resources.getString(R.string.bulk_delete_success, trashIds.size)
+                    } else {
+                        resources.getString(R.string.bulk_delete_partial, trashIds.size, failed)
+                    }
+                    val undo = snack.showSnackbar(
+                        message,
+                        actionLabel = if (trashIds.isNotEmpty()) undoText else null
+                    )
+                    if (undo == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                        var restoreFailed = false
+                        trashIds.forEach { trashId ->
+                            if (!vm.restore(trashId)) restoreFailed = true
+                        }
+                        if (restoreFailed) snack.showSnackbar(restoreFailedText)
+                    }
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun SelectableOtpRow(
+    sms: SmsMessageModel,
+    selected: Boolean,
+    enabled: Boolean,
+    onToggle: () -> Unit
+) {
+    val rowBackground = categoryRowBackground(sms.category)
+    Column {
+        Row(
+            Modifier.fillMaxWidth()
+                .background(rowBackground)
+                .clickable(enabled = enabled, onClick = onToggle)
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = selected,
+                onCheckedChange = { onToggle() },
+                enabled = enabled
+            )
+            Spacer(Modifier.width(4.dp))
+            Avatar(sms.contactName ?: sms.address, sms.contactPhotoUri)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        sms.contactName ?: sms.address,
+                        modifier = Modifier.weight(1f),
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    MessageDateTime(sms.date)
+                }
+                Text(
+                    sms.body,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+        WavySmsDivider(rowBackground)
     }
 }
 

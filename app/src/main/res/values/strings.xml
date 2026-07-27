@@ -117,4 +117,12 @@
     <string name="notification_mark_read">✓ 标为已读</string>
     <string name="mms_warning_title">暂不支持 MMS</string>
     <string name="mms_warning_body">JX SMS Reader 当前只支持普通 SMS。请切换到支持 MMS 的短信应用查看此类消息。</string>
+    <string name="otp_inbox">认证码汇总</string>
+    <string name="otp_empty">没有认证码短信</string>
+    <string name="select_all">全选</string>
+    <string name="clear_selection">取消全选</string>
+    <string name="delete_selected">删除（%1$d）</string>
+    <string name="selected_count">已选 %1$d 条</string>
+    <string name="delete_selected_title">删除所选认证码？</string>
+    <string name="delete_selected_body">将把所选的 %1$d 条认证码短信移入垃圾箱。</string>
 </resources>

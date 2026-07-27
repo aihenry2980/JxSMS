@@ -36,4 +36,12 @@
     <string name="unsupported_send">JX SMS Reader unterstützt das Senden nicht.</string><string name="clipboard_label">Nachrichtentext</string>
     <string name="channel_sms">Neue Nachrichten</string><string name="channel_warning">Kompatibilitätswarnungen</string><string name="notification_delete">🔴 Löschen</string><string name="notification_mark_read">✓ Gelesen</string>
     <string name="mms_warning_title">MMS wird nicht unterstützt</string><string name="mms_warning_body">JX SMS Reader unterstützt derzeit nur normale SMS. Bitte zu einer MMS-fähigen Nachrichten-App wechseln.</string>
+    <string name="otp_inbox">Bestätigungscodes</string>
+    <string name="otp_empty">Keine Nachrichten mit Bestätigungscodes</string>
+    <string name="select_all">Alle auswählen</string>
+    <string name="clear_selection">Auswahl aufheben</string>
+    <string name="delete_selected">Löschen (%1$d)</string>
+    <string name="selected_count">%1$d ausgewählt</string>
+    <string name="delete_selected_title">Ausgewählte Codes löschen?</string>
+    <string name="delete_selected_body">Die ausgewählten %1$d Nachrichten mit Bestätigungscodes in den Papierkorb verschieben.</string>
 </resources>

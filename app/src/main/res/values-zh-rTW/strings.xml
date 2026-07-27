@@ -36,4 +36,12 @@
     <string name="unsupported_send">JX SMS Reader 不支援傳送簡訊。</string><string name="clipboard_label">簡訊內文</string>
     <string name="channel_sms">新簡訊</string><string name="channel_warning">相容性提醒</string><string name="notification_delete">🔴 刪除</string><string name="notification_mark_read">✓ 標為已讀</string>
     <string name="mms_warning_title">暫不支援 MMS</string><string name="mms_warning_body">JX SMS Reader 目前只支援一般 SMS。請切換到支援 MMS 的簡訊應用程式查看此類訊息。</string>
+    <string name="otp_inbox">驗證碼彙總</string>
+    <string name="otp_empty">沒有驗證碼簡訊</string>
+    <string name="select_all">全選</string>
+    <string name="clear_selection">取消全選</string>
+    <string name="delete_selected">刪除（%1$d）</string>
+    <string name="selected_count">已選 %1$d 則</string>
+    <string name="delete_selected_title">刪除所選驗證碼？</string>
+    <string name="delete_selected_body">將把所選的 %1$d 則驗證碼簡訊移入垃圾桶。</string>
 </resources>

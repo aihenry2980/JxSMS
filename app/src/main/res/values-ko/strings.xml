@@ -36,4 +36,12 @@
     <string name="unsupported_send">JX SMS Reader는 메시지 전송을 지원하지 않습니다.</string><string name="clipboard_label">메시지 내용</string>
     <string name="channel_sms">새 메시지</string><string name="channel_warning">호환성 알림</string><string name="notification_delete">🔴 삭제</string><string name="notification_mark_read">✓ 읽음</string>
     <string name="mms_warning_title">MMS 지원 안 됨</string><string name="mms_warning_body">JX SMS Reader는 현재 일반 SMS만 지원합니다. MMS를 보려면 MMS 지원 메시지 앱으로 전환하세요.</string>
+    <string name="otp_inbox">인증 코드 모음</string>
+    <string name="otp_empty">인증 코드 메시지가 없습니다</string>
+    <string name="select_all">전체 선택</string>
+    <string name="clear_selection">선택 해제</string>
+    <string name="delete_selected">삭제 (%1$d)</string>
+    <string name="selected_count">%1$d개 선택됨</string>
+    <string name="delete_selected_title">선택한 인증 코드를 삭제할까요?</string>
+    <string name="delete_selected_body">선택한 인증 코드 메시지 %1$d개를 휴지통으로 이동합니다.</string>
 </resources>
