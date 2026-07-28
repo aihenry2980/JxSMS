@@ -29,13 +29,13 @@
     <string name="merge_sender">同じ送信者をまとめる</string><string name="merge_on">送信者ごとの会話にまとめる</string><string name="merge_off">SMSを1件ずつ表示</string>
     <string name="left_swipe">左スワイプの操作</string><string name="right_swipe">右スワイプの操作</string>
     <string name="trash_retention">30日間保存し、毎日自動整理</string><string name="sms_classification">メッセージ分類</string><string name="classification_detail">オフラインの中国語・韓国語・英語キーワード規則</string>
-    <string name="tag_colors">タグの色</string><string name="mms_unsupported_setting">MMS、グループMMS、RCSは未対応</string><string name="version">バージョン</string>
+    <string name="tag_colors">タグの色</string><string name="mms_unsupported_setting">ダウンロード済みMMSは読み取り専用で表示可能。RCSは未対応</string><string name="version">バージョン</string>
     <string name="language">言語</string><string name="language_system">システムの既定</string><string name="language_zh_cn">中国語（簡体字）</string><string name="language_zh_tw">中国語（繁体字）</string><string name="language_ja">日本語</string><string name="language_en">英語</string><string name="language_ko">韓国語</string><string name="language_de">ドイツ語</string>
     <string name="choose_tag_color">「%1$s」の色を選択</string><string name="change_category">メッセージのカテゴリを変更</string>
     <string name="color_deep_blue">濃い青</string><string name="color_indigo">藍</string><string name="color_purple">紫</string><string name="color_rose">ローズ</string><string name="color_red">赤</string><string name="color_orange_brown">橙茶</string><string name="color_gold_brown">黄土</string><string name="color_green">緑</string><string name="color_teal">青緑</string><string name="color_dark_gray">濃い灰</string>
     <string name="unsupported_send">JX SMS Readerはメッセージ送信に対応していません。</string><string name="clipboard_label">メッセージ本文</string>
     <string name="channel_sms">新着メッセージ</string><string name="channel_warning">互換性の警告</string><string name="notification_delete">🔴 削除</string><string name="notification_mark_read">✓ 既読</string>
-    <string name="mms_warning_title">MMSは未対応です</string><string name="mms_warning_body">JX SMS Readerは現在、通常のSMSのみ対応しています。MMS対応のメッセージアプリに切り替えて確認してください。</string>
+    <string name="mms_warning_title">JXではこのMMSを受信できません</string><string name="mms_warning_body">JXはSamsung MessagesがダウンロードしたMMSを表示するだけで、自ら保存・ダウンロードしません。Samsung Messagesを既定にして再送を依頼してください。</string>
     <string name="otp_inbox">認証コード一覧</string>
     <string name="otp_empty">認証コードのメッセージはありません</string>
     <string name="select_all">すべて選択</string>

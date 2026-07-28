@@ -87,7 +87,7 @@
     <string name="sms_classification">短信分类</string>
     <string name="classification_detail">使用离线、确定性的中韩英关键词规则</string>
     <string name="tag_colors">标签颜色</string>
-    <string name="mms_unsupported_setting">当前不支持 MMS、群组彩信和 RCS</string>
+    <string name="mms_unsupported_setting">可只读查看已下载 MMS；仍不支持 RCS</string>
     <string name="version">版本</string>
     <string name="language">语言</string>
     <string name="language_system">跟随系统</string>
@@ -115,8 +115,14 @@
     <string name="channel_warning">兼容性提醒</string>
     <string name="notification_delete">🔴 删除</string>
     <string name="notification_mark_read">✓ 标为已读</string>
-    <string name="mms_warning_title">暂不支持 MMS</string>
-    <string name="mms_warning_body">JX SMS Reader 当前只支持普通 SMS。请切换到支持 MMS 的短信应用查看此类消息。</string>
+    <string name="mms_warning_title">JX 无法接收这条 MMS</string>
+    <string name="mms_warning_body">JX 只读显示已由 Samsung Messages 下载的 MMS，不会自行下载或保存。请将 Samsung Messages 设为默认并让发送者重发。</string>
+    <string name="mms_empty">MMS 没有可显示的文字或附件</string>
+    <string name="mms_attachment_only">MMS 附件</string>
+    <string name="mms_subject">主题</string>
+    <string name="mms_attachments">附件：%1$d 个</string>
+    <string name="mms_image_unavailable">无法读取这张 MMS 图片</string>
+    <string name="mms_non_image_attachment">当前仅支持在 JX 内直接预览图片附件</string>
     <string name="otp_inbox">认证码汇总</string>
     <string name="otp_empty">没有认证码短信</string>
     <string name="select_all">全选</string>

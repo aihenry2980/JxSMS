@@ -80,4 +80,10 @@
     <string name="continue_existing_backup">기존 백업 계속</string>
     <string name="regenerate">다시 생성</string>
     <string name="choose_email_app">이메일 앱 선택</string>
+    <string name="mms_empty">표시할 문자나 첨부가 없는 MMS입니다</string>
+    <string name="mms_attachment_only">MMS 첨부</string>
+    <string name="mms_subject">제목</string>
+    <string name="mms_attachments">첨부: %1$d개</string>
+    <string name="mms_image_unavailable">이 MMS 이미지를 읽을 수 없습니다</string>
+    <string name="mms_non_image_attachment">현재 JX에서는 이미지 첨부만 직접 볼 수 있습니다</string>
 </resources>

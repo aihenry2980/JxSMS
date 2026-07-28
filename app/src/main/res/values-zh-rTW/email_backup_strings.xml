@@ -80,4 +80,10 @@
     <string name="continue_existing_backup">繼續原備份</string>
     <string name="regenerate">重新產生</string>
     <string name="choose_email_app">選擇郵件應用程式</string>
+    <string name="mms_empty">MMS 沒有可顯示的文字或附件</string>
+    <string name="mms_attachment_only">MMS 附件</string>
+    <string name="mms_subject">主旨</string>
+    <string name="mms_attachments">附件：%1$d 個</string>
+    <string name="mms_image_unavailable">無法讀取這張 MMS 圖片</string>
+    <string name="mms_non_image_attachment">目前僅支援在 JX 內直接預覽圖片附件</string>
 </resources>

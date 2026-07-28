@@ -9,6 +9,7 @@ import com.example.jxsms.data.backup.EmailBackupPreferencesRepository
 import com.example.jxsms.data.backup.EmailBackupRepository
 import com.example.jxsms.data.preferences.SwipePreferencesRepository
 import com.example.jxsms.data.sms.AndroidSmsDataSource
+import com.example.jxsms.data.sms.AndroidMmsDataSource
 import com.example.jxsms.data.sms.SmsRepository
 import com.example.jxsms.data.trash.SmsReaderDatabase
 import com.example.jxsms.data.trash.TrashRepository
@@ -42,8 +43,9 @@ class AppContainer(app: Application) {
     private val database = SmsReaderDatabase.get(app)
     val classifier = RuleBasedSmsClassifier()
     val source = AndroidSmsDataSource(app.contentResolver)
+    val mmsSource = AndroidMmsDataSource(app.contentResolver)
     val contacts = ContactRepository(app, app.contentResolver)
-    val sms = SmsRepository(app.contentResolver, source, classifier, contacts)
+    val sms = SmsRepository(app.contentResolver, source, mmsSource, classifier, contacts)
     val trash = TrashRepository(database.trashDao(), source, classifier)
     val preferences = SwipePreferencesRepository(app)
     val emailBackupPreferences = EmailBackupPreferencesRepository(app)

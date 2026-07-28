@@ -29,13 +29,13 @@
     <string name="merge_sender">같은 발신자 병합</string><string name="merge_on">발신자별 대화로 묶기</string><string name="merge_off">각 SMS를 따로 표시</string>
     <string name="left_swipe">왼쪽 스와이프</string><string name="right_swipe">오른쪽 스와이프</string>
     <string name="trash_retention">30일 보관 후 매일 자동 정리</string><string name="sms_classification">메시지 분류</string><string name="classification_detail">오프라인 중국어·한국어·영어 키워드 규칙</string>
-    <string name="tag_colors">태그 색상</string><string name="mms_unsupported_setting">MMS, 그룹 MMS 및 RCS는 지원하지 않음</string><string name="version">버전</string>
+    <string name="tag_colors">태그 색상</string><string name="mms_unsupported_setting">다운로드된 MMS는 읽기 전용으로 표시하며 RCS는 지원하지 않음</string><string name="version">버전</string>
     <string name="language">언어</string><string name="language_system">시스템 기본값</string><string name="language_zh_cn">중국어(간체)</string><string name="language_zh_tw">중국어(번체)</string><string name="language_ja">일본어</string><string name="language_en">영어</string><string name="language_ko">한국어</string><string name="language_de">독일어</string>
     <string name="choose_tag_color">“%1$s” 색상 선택</string><string name="change_category">메시지 분류 변경</string>
     <string name="color_deep_blue">진한 파랑</string><string name="color_indigo">남색</string><string name="color_purple">보라</string><string name="color_rose">장미색</string><string name="color_red">빨강</string><string name="color_orange_brown">주황 갈색</string><string name="color_gold_brown">황토색</string><string name="color_green">초록</string><string name="color_teal">청록</string><string name="color_dark_gray">진한 회색</string>
     <string name="unsupported_send">JX SMS Reader는 메시지 전송을 지원하지 않습니다.</string><string name="clipboard_label">메시지 내용</string>
     <string name="channel_sms">새 메시지</string><string name="channel_warning">호환성 알림</string><string name="notification_delete">🔴 삭제</string><string name="notification_mark_read">✓ 읽음</string>
-    <string name="mms_warning_title">MMS 지원 안 됨</string><string name="mms_warning_body">JX SMS Reader는 현재 일반 SMS만 지원합니다. MMS를 보려면 MMS 지원 메시지 앱으로 전환하세요.</string>
+    <string name="mms_warning_title">JX에서 이 MMS를 수신할 수 없음</string><string name="mms_warning_body">JX는 Samsung Messages가 다운로드한 MMS만 표시하며 직접 다운로드하거나 저장하지 않습니다. Samsung Messages를 기본으로 설정하고 재전송을 요청하세요.</string>
     <string name="otp_inbox">인증 코드 모음</string>
     <string name="otp_empty">인증 코드 메시지가 없습니다</string>
     <string name="select_all">전체 선택</string>

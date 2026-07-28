@@ -13,6 +13,7 @@ import android.os.Bundle
 import android.os.LocaleList
 import android.provider.Telephony
 import android.provider.Settings
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.LruCache
 import androidx.compose.foundation.Image
@@ -28,7 +29,10 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -83,6 +87,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -101,6 +106,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.Lifecycle
 import com.example.jxsms.data.sms.SmsMessageModel
+import com.example.jxsms.data.sms.MessageTransport
+import com.example.jxsms.data.sms.MmsAttachment
 import com.example.jxsms.data.preferences.DefaultTagColors
 import com.example.jxsms.data.trash.TrashResult
 import com.example.jxsms.data.trash.TrashSmsEntity
@@ -262,6 +269,11 @@ private fun InboxScreen(
             sms.address.contains(term, ignoreCase = true) ||
                 sms.contactName.orEmpty().contains(term, ignoreCase = true) ||
                 sms.body.contains(term, ignoreCase = true) ||
+                sms.subject.orEmpty().contains(term, ignoreCase = true) ||
+                sms.attachments.any {
+                    it.fileName.orEmpty().contains(term, ignoreCase = true) ||
+                        it.contentType.contains(term, ignoreCase = true)
+                } ||
                 resources.getString(categoryStringRes(sms.category)).contains(term, ignoreCase = true)
         }
     }
@@ -313,7 +325,9 @@ private fun InboxScreen(
                         items(conversations, key = { it.senderKey }) { conversation ->
                             SwipeConversationRow(
                                 group = conversation,
-                                enabled = isDefault,
+                                enabled = isDefault && conversation.messages.all {
+                                    it.transport == MessageTransport.SMS
+                                },
                                 onOpen = { onConversation(conversation.senderKey) },
                                 onDeleteRequested = { deleteConversation = conversation }
                             )
@@ -324,7 +338,11 @@ private fun InboxScreen(
                 ScrollableSmsList(unmergedListState) {
                     LazyColumn(state = unmergedListState, modifier = Modifier.fillMaxSize()) {
                         items(filteredMessages, key = { it.id }) { sms ->
-                            SwipeRow(sms, prefs.left, prefs.right, enabled = isDefault,
+                            SwipeRow(
+                                sms,
+                                prefs.left,
+                                prefs.right,
+                                enabled = isDefault && sms.transport == MessageTransport.SMS,
                                 onOpen = { onOpen(sms.id) },
                                 onAction = { action ->
                                     when (action) {
@@ -453,13 +471,18 @@ private fun ConversationSummaryRow(group: ConversationGroup, onOpen: () -> Unit)
                 Row {
                     Text(sms.contactName ?: sms.address, Modifier.weight(1f),
                         fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (sms.transport == MessageTransport.MMS) {
+                        MmsBadge()
+                        Spacer(Modifier.width(5.dp))
+                    }
                     CategoryTag(sms.category)
                     Spacer(Modifier.width(7.dp))
                     Text(stringResource(R.string.message_count, group.count),
                         style = MaterialTheme.typography.labelMedium)
                 }
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(if (sms.isOutgoing()) stringResource(R.string.me_preview, sms.body) else sms.body,
+                    val preview = messagePreviewText(sms)
+                    Text(if (sms.isOutgoing()) stringResource(R.string.me_preview, preview) else preview,
                         modifier = Modifier.weight(1f),
                         maxLines = 2, overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Normal)
@@ -525,10 +548,15 @@ private fun SmsRow(sms: SmsMessageModel, onOpen: () -> Unit, showOutgoingAvatar:
                     Text(sms.contactName ?: sms.address, Modifier.weight(1f),
                         fontWeight = FontWeight.Bold,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (sms.transport == MessageTransport.MMS) {
+                        MmsBadge()
+                        Spacer(Modifier.width(5.dp))
+                    }
                     CategoryTag(sms.category)
                 }
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(if (sms.isOutgoing()) stringResource(R.string.me_preview, sms.body) else sms.body,
+                    val preview = messagePreviewText(sms)
+                    Text(if (sms.isOutgoing()) stringResource(R.string.me_preview, preview) else preview,
                         modifier = Modifier.weight(1f),
                         maxLines = 3, overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall,
@@ -695,7 +723,11 @@ private fun ConversationScreen(
         } else {
             LazyColumn(Modifier.padding(padding)) {
                 items(messages, key = { it.id }) { sms ->
-                    SwipeRow(sms, prefs.left, prefs.right, enabled = canModify,
+                    SwipeRow(
+                        sms,
+                        prefs.left,
+                        prefs.right,
+                        enabled = canModify && sms.transport == MessageTransport.SMS,
                         showOutgoingAvatar = true,
                         onOpen = { onOpen(sms.id) },
                         onAction = { action ->
@@ -726,6 +758,35 @@ private fun ConversationScreen(
     }
 }
 
+@Composable
+private fun MmsBadge() {
+    Box(
+        Modifier.clip(RoundedCornerShape(5.dp))
+            .background(MaterialTheme.colorScheme.secondary)
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+    ) {
+        Text(
+            "MMS",
+            color = MaterialTheme.colorScheme.onSecondary,
+            style = MaterialTheme.typography.labelSmall
+        )
+    }
+}
+
+@Composable
+private fun messagePreviewText(message: SmsMessageModel): String {
+    val values = listOfNotNull(
+        message.subject?.takeIf(String::isNotBlank),
+        message.body.takeIf(String::isNotBlank)
+    )
+    return values.joinToString(" · ").ifBlank {
+        stringResource(
+            if (message.attachments.isEmpty()) R.string.mms_empty
+            else R.string.mms_attachment_only
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun OtpScreen(
@@ -735,7 +796,9 @@ private fun OtpScreen(
 ) {
     val allMessages by vm.conversationMessages.collectAsStateWithLifecycle()
     val otpMessages = remember(allMessages) {
-        allMessages.filter { it.category == SmsCategory.OTP }
+        allMessages.filter {
+            it.transport == MessageTransport.SMS && it.category == SmsCategory.OTP
+        }
     }
     val listState = rememberLazyListState()
     var selectedIds by remember { mutableStateOf(emptySet<Long>()) }
@@ -931,15 +994,22 @@ private fun DetailScreen(vm: AppViewModel, id: Long, canModify: Boolean, onBack:
     val context = LocalContext.current
     val copiedText = stringResource(R.string.copied)
     var categoryOpen by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(id, canModify, sms?.type) {
-        if (canModify && sms?.isOutgoing() == false) vm.markRead(id, true)
+    LaunchedEffect(id, canModify, sms?.type, sms?.transport) {
+        if (canModify && sms?.transport == MessageTransport.SMS &&
+            sms.isOutgoing() == false
+        ) {
+            vm.markRead(id, true)
+        }
     }
     Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.detail_title)) },
         navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.back)) } }) },
         snackbarHost = { SnackbarHost(snack) }) { padding ->
         if (sms == null) Box(Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(stringResource(R.string.message_missing))
-        } else Column(Modifier.padding(padding).padding(18.dp)) {
+        } else Column(
+            Modifier.padding(padding).padding(18.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
             val headerBackground =
                 if (isSystemInDarkTheme()) Color(0xFF34373C) else Color(0xFFE9EBEF)
             Column(
@@ -954,6 +1024,10 @@ private fun DetailScreen(vm: AppViewModel, id: Long, canModify: Boolean, onBack:
                     Column {
                         Text(sms.contactName ?: sms.address, fontWeight = FontWeight.Bold)
                         Text(sms.address)
+                        if (sms.transport == MessageTransport.MMS) {
+                            Spacer(Modifier.height(4.dp))
+                            MmsBadge()
+                        }
                     }
                 }
                 Spacer(Modifier.height(12.dp))
@@ -977,19 +1051,70 @@ private fun DetailScreen(vm: AppViewModel, id: Long, canModify: Boolean, onBack:
                 ))
             }
             Spacer(Modifier.height(18.dp))
-            SelectionContainer {
-                Text(sms.body, style = MaterialTheme.typography.bodyLarge)
+            sms.subject?.takeIf(String::isNotBlank)?.let { subject ->
+                Column(
+                    Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(headerBackground)
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.mms_subject),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    SelectionContainer {
+                        Text(subject, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+                Spacer(Modifier.height(14.dp))
+            }
+            if (sms.body.isNotBlank()) {
+                SelectionContainer {
+                    Text(sms.body, style = MaterialTheme.typography.bodyLarge)
+                }
+            } else if (sms.attachments.isEmpty()) {
+                Text(
+                    stringResource(R.string.mms_empty),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (sms.attachments.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    stringResource(R.string.mms_attachments, sms.attachments.size),
+                    fontWeight = FontWeight.Bold
+                )
+                sms.attachments.forEach { attachment ->
+                    MmsAttachmentView(attachment)
+                }
             }
             Spacer(Modifier.height(22.dp))
             Row {
-                TextButton(onClick = { copyText(context, sms.body); scope.launch { snack.showSnackbar(copiedText) } }) {
+                TextButton(
+                    onClick = {
+                        copyText(
+                            context,
+                            listOfNotNull(
+                                sms.subject,
+                                sms.body.takeIf(String::isNotBlank)
+                            ).joinToString("\n")
+                        )
+                        scope.launch { snack.showSnackbar(copiedText) }
+                    },
+                    enabled = sms.subject?.isNotBlank() == true || sms.body.isNotBlank()
+                ) {
                     Text(stringResource(R.string.copy_body))
                 }
                 TextButton(onClick = { vm.markRead(id, !sms.read) },
-                    enabled = canModify && !sms.isOutgoing()) {
+                    enabled = canModify && sms.transport == MessageTransport.SMS &&
+                        !sms.isOutgoing()) {
                     Text(stringResource(if (sms.read) R.string.mark_unread else R.string.mark_read))
                 }
-                TextButton(onClick = { scope.launch { vm.delete(id); onBack() } }, enabled = canModify) {
+                TextButton(
+                    onClick = { scope.launch { vm.delete(id); onBack() } },
+                    enabled = canModify && sms.transport == MessageTransport.SMS
+                ) {
                     Text(stringResource(R.string.move_to_trash))
                 }
             }
@@ -1006,6 +1131,75 @@ private fun DetailScreen(vm: AppViewModel, id: Long, canModify: Boolean, onBack:
         )
     }
 }
+
+@Composable
+private fun MmsAttachmentView(attachment: MmsAttachment) {
+    val context = LocalContext.current
+    val bitmap by produceState<Bitmap?>(null, attachment.contentUri) {
+        value = if (!attachment.isImage) null else withContext(Dispatchers.IO) {
+            decodeSampledBitmap(context, attachment.contentUri)
+        }
+    }
+    Column(
+        Modifier.fillMaxWidth()
+            .padding(top = 10.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(10.dp)
+    ) {
+        Text(
+            attachment.fileName ?: attachment.contentType,
+            style = MaterialTheme.typography.labelLarge
+        )
+        if (attachment.fileName != null) {
+            Text(
+                attachment.contentType,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (attachment.isImage) {
+            Spacer(Modifier.height(8.dp))
+            if (bitmap == null) {
+                Text(
+                    stringResource(R.string.mms_image_unavailable),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                val ratio = bitmap!!.width.toFloat() / bitmap!!.height.coerceAtLeast(1)
+                Image(
+                    bitmap = bitmap!!.asImageBitmap(),
+                    contentDescription = attachment.fileName,
+                    modifier = Modifier.fillMaxWidth()
+                        .aspectRatio(ratio.coerceIn(0.4f, 2.5f)),
+                    contentScale = ContentScale.Fit
+                )
+            }
+        } else {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.mms_non_image_attachment),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+private fun decodeSampledBitmap(context: Context, uri: Uri): Bitmap? = runCatching {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    context.contentResolver.openInputStream(uri)?.use {
+        BitmapFactory.decodeStream(it, null, bounds)
+    }
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching null
+    var sample = 1
+    while (bounds.outWidth / sample > 1600 || bounds.outHeight / sample > 1600) {
+        sample *= 2
+    }
+    val options = BitmapFactory.Options().apply { inSampleSize = sample }
+    context.contentResolver.openInputStream(uri)?.use {
+        BitmapFactory.decodeStream(it, null, options)
+    }
+}.getOrNull()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

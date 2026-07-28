@@ -80,4 +80,10 @@
     <string name="continue_existing_backup">既存バックアップを続ける</string>
     <string name="regenerate">再生成</string>
     <string name="choose_email_app">メールアプリを選択</string>
+    <string name="mms_empty">表示できる本文または添付がないMMSです</string>
+    <string name="mms_attachment_only">MMS添付</string>
+    <string name="mms_subject">件名</string>
+    <string name="mms_attachments">添付：%1$d件</string>
+    <string name="mms_image_unavailable">このMMS画像を読み取れません</string>
+    <string name="mms_non_image_attachment">現在JX内で直接表示できるのは画像添付のみです</string>
 </resources>

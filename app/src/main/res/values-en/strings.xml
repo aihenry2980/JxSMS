@@ -29,13 +29,13 @@
     <string name="merge_sender">Merge same sender</string><string name="merge_on">Group Inbox by sender</string><string name="merge_off">Show each SMS separately</string>
     <string name="left_swipe">Swipe left action</string><string name="right_swipe">Swipe right action</string>
     <string name="trash_retention">Messages are kept for 30 days and cleaned daily</string><string name="sms_classification">Message classification</string><string name="classification_detail">Offline deterministic Chinese, Korean, and English keyword rules</string>
-    <string name="tag_colors">Tag colors</string><string name="mms_unsupported_setting">MMS, group MMS, and RCS are not supported</string><string name="version">Version</string>
+    <string name="tag_colors">Tag colors</string><string name="mms_unsupported_setting">Downloaded MMS can be viewed read-only; RCS is not supported</string><string name="version">Version</string>
     <string name="language">Language</string><string name="language_system">System default</string><string name="language_zh_cn">Chinese (Simplified)</string><string name="language_zh_tw">Chinese (Traditional)</string><string name="language_ja">Japanese</string><string name="language_en">English</string><string name="language_ko">Korean</string><string name="language_de">German</string>
     <string name="choose_tag_color">Choose a color for “%1$s”</string><string name="change_category">Change message category</string>
     <string name="color_deep_blue">Deep blue</string><string name="color_indigo">Indigo</string><string name="color_purple">Purple</string><string name="color_rose">Rose</string><string name="color_red">Red</string><string name="color_orange_brown">Burnt orange</string><string name="color_gold_brown">Ochre</string><string name="color_green">Green</string><string name="color_teal">Teal</string><string name="color_dark_gray">Dark gray</string>
     <string name="unsupported_send">JX SMS Reader does not support sending messages.</string><string name="clipboard_label">Message text</string>
     <string name="channel_sms">New messages</string><string name="channel_warning">Compatibility alerts</string><string name="notification_delete">🔴 Delete</string><string name="notification_mark_read">✓ Mark read</string>
-    <string name="mms_warning_title">MMS is not supported</string><string name="mms_warning_body">JX SMS Reader currently supports standard SMS only. Switch to an MMS-capable messaging app to view this message.</string>
+    <string name="mms_warning_title">JX cannot receive this MMS</string><string name="mms_warning_body">JX only displays MMS downloaded by Samsung Messages and cannot download or save one itself. Make Samsung Messages the default and ask the sender to resend it.</string>
     <string name="otp_inbox">Verification codes</string>
     <string name="otp_empty">No verification-code messages</string>
     <string name="select_all">Select all</string>

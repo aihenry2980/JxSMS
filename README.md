@@ -1,12 +1,12 @@
 # JX SMS Reader
 
-JX SMS Reader 是面向 Samsung Galaxy S26+（Android 16 / API 36）的个人离线短信阅读器。它可以逐条显示 SMS，也可以按发信者合并为会话，并且没有回复、新建、输入框或发送入口。应用不使用网络、云端 AI、统计 SDK 或广告 SDK。
+JX SMS Reader 是面向 Samsung Galaxy S26+（Android 16 / API 36）的个人离线短信阅读器。它可以逐条显示 SMS，以及 Samsung Messages 已下载到系统 Provider 的 MMS，也可以按发信者合并为会话，并且没有回复、新建、输入框或发送入口。应用不使用网络、云端 AI、统计 SDK 或广告 SDK。
 
-> **重要风险：当前版本只可靠支持普通 SMS，不解析 MMS、群组彩信或 RCS。设为默认短信应用后，这些消息可能无法正常显示。** `WAP_PUSH_DELIVER` 到达时应用会保守地记录事件并显示“不支持 MMS”通知，不会伪装成已保存。
+> **重要：请让 Samsung Messages 保持默认短信应用。** Samsung 负责接收和下载 MMS，JX 以只读方式呈现系统中已有的 MMS 主题、文字和图片附件。JX 不下载新 MMS，也不支持 RCS；若误设为默认应用，`WAP_PUSH_DELIVER` 到达时只会显示风险通知，不会伪装成已保存。
 
 ## 默认短信应用与只读模式
 
-为避免 MMS、群组彩信和 RCS 在 JX 不支持的情况下丢失，建议让 Samsung Messages 保持系统默认短信应用。JX 不再在首次启动或设置页提示、请求成为默认短信应用；获得 `READ_SMS` 权限后作为只读阅读器使用。
+为保证 MMS 由成熟的系统应用可靠下载，建议让 Samsung Messages 保持系统默认短信应用。JX 不会在首次启动或设置页提示、请求成为默认短信应用；获得 `READ_SMS` 权限后作为只读阅读器使用。
 
 Android 只允许当前默认 SMS 应用写入和删除系统 Telephony SMS Provider。因此 Samsung Messages 为默认时，JX 可以读取、搜索、分类和备份普通 SMS，但通知栏删除、标记已读、滑动删除、应用垃圾箱、撤销及恢复不可用，UI 会进入明确的只读受限模式。
 
@@ -18,14 +18,15 @@ Android 只允许当前默认 SMS 应用写入和删除系统 Telephony SMS Prov
 - `RECEIVE_SMS`：默认应用接收普通 SMS。
 - `SEND_SMS`：默认 SMS 角色契约所需；产品 UI 不提供发送能力。
 - `READ_CONTACTS`：可选，用于联系人名称和头像；拒绝后使用 Sender 和稳定字母头像。
-- `POST_NOTIFICATIONS`：显示逐条短信通知及 MMS 风险通知。
-- `RECEIVE_MMS`：接收并安全提示不支持的 MMS 事件。
+- `POST_NOTIFICATIONS`：仅在 JX 被手动设为默认应用的旧兼容路径中显示短信或 MMS 风险通知；只读模式不会主动通知。
+- `RECEIVE_MMS`：默认短信角色兼容声明；推荐配置下由 Samsung Messages 接收和下载 MMS。
 
 没有网络、位置、存储、通讯录写入、通知读取、无障碍、悬浮窗、Root、Shizuku 或 `QUERY_ALL_PACKAGES` 权限。
 
 ## 核心流程与架构
 
 - `data/sms` 使用 `ContentResolver` 查询/写入 `Telephony.Sms`，Cursor 均由 `use` 关闭；`ContentObserver` 驱动 StateFlow 刷新。
+- `data/sms/AndroidMmsDataSource` 只读查询 `Telephony.Mms`、`Mms.Addr` 和 `Mms.Part`，把 MMS 秒级时间转换为毫秒，使用独立合成 ID 避免与 SMS `_id` 冲突，并忽略 SMIL 控制 Part。
 - `domain/classifier` 使用确定性的中/韩/英关键词规则，优先识别明确退订广告标记，其次认证语义、快递、通知、真人和未知。数字本身不会被判为 OTP。
 - `receiver/IncomingSmsReceiver` 用 `goAsync` 和 IO Coroutine 合并 multipart PDU，以 Sender、正文、时间窗口和 subscriptionId 做短期幂等检查，然后写 Provider、分类并通知。
 - `notification` 使用 `BigTextStyle`，标题以 `【分类】` 开头。点击打开只读详情；显式且不可变的 PendingIntent 分别执行“标为已读”和“删除”，用户可以设置删除按钮在左侧或右侧；没有 Reply action。
@@ -99,7 +100,7 @@ subject:"JX SMS Backup" after:2026/07/01 before:2026/08/01
 3. 永久删除一条，确认二次提示；“清空”应明确提示不可撤销。
 4. 将一条测试记录保留到过期边界或用测试代码验证，确认 30 天记录清理、未满 30 天保留。
 5. 双 SIM 分别接收正文相同的短信，确认 subscriptionId 不同不会错误去重；详情显示相应 subscriptionId。
-6. 发送 MMS，确认 App 不崩溃，显示“暂不支持 MMS”，且 Inbox 不出现空 SMS。
+6. 让 Samsung Messages 下载一条含主题、正文和图片的 MMS，打开 JX 后确认列表出现 `MMS` 标记，详情能显示主题、文字和图片。
 
 ## 构建与测试
 
@@ -127,7 +128,9 @@ app/build/outputs/apk/debug/app-debug.apk
 ## 已知限制
 
 - 仅针对 API 36；未适配旧 Android、平板或其他厂商设备。
-- 不解析、保存或呈现 MMS/RCS；切换默认应用期间这类消息存在无法查看的风险。
+- JX 只读取 Samsung Messages 已下载到系统 Provider 的 MMS，不负责网络下载或重试；非图片附件目前只显示名称和 MIME 类型。
+- Gmail 邮件备份当前仍只包含普通 Inbox SMS，不包含 MMS 二进制附件。
+- 不支持 RCS；运营商或 Samsung 专有 RCS 内容不一定存在于公开 Telephony Provider。
 - App 没有发送或回复能力，外部 `SENDTO` 只显示不支持说明。
 - 联系人照片读取依赖系统联系人权限；拒绝权限时使用生成头像。
 - Room 与系统 Provider 无法共享事务。实现保证“先备份再删除”和可重试状态，但极端的系统进程终止仍需在垃圾箱中检查未完成备份。

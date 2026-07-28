@@ -29,13 +29,13 @@
     <string name="merge_sender">Gleichen Absender zusammenfassen</string><string name="merge_on">Nach Absender gruppieren</string><string name="merge_off">Jede SMS einzeln anzeigen</string>
     <string name="left_swipe">Aktion beim Wischen nach links</string><string name="right_swipe">Aktion beim Wischen nach rechts</string>
     <string name="trash_retention">30 Tage aufbewahren und täglich bereinigen</string><string name="sms_classification">Nachrichtenklassifizierung</string><string name="classification_detail">Offline-Regeln mit chinesischen, koreanischen und englischen Schlüsselwörtern</string>
-    <string name="tag_colors">Tag-Farben</string><string name="mms_unsupported_setting">MMS, Gruppen-MMS und RCS werden nicht unterstützt</string><string name="version">Version</string>
+    <string name="tag_colors">Tag-Farben</string><string name="mms_unsupported_setting">Heruntergeladene MMS sind schreibgeschützt sichtbar; RCS wird nicht unterstützt</string><string name="version">Version</string>
     <string name="language">Sprache</string><string name="language_system">Systemstandard</string><string name="language_zh_cn">Chinesisch (vereinfacht)</string><string name="language_zh_tw">Chinesisch (traditionell)</string><string name="language_ja">Japanisch</string><string name="language_en">Englisch</string><string name="language_ko">Koreanisch</string><string name="language_de">Deutsch</string>
     <string name="choose_tag_color">Farbe für „%1$s“ wählen</string><string name="change_category">Nachrichtenkategorie ändern</string>
     <string name="color_deep_blue">Dunkelblau</string><string name="color_indigo">Indigo</string><string name="color_purple">Violett</string><string name="color_rose">Rosa</string><string name="color_red">Rot</string><string name="color_orange_brown">Orangebraun</string><string name="color_gold_brown">Ocker</string><string name="color_green">Grün</string><string name="color_teal">Petrol</string><string name="color_dark_gray">Dunkelgrau</string>
     <string name="unsupported_send">JX SMS Reader unterstützt das Senden nicht.</string><string name="clipboard_label">Nachrichtentext</string>
     <string name="channel_sms">Neue Nachrichten</string><string name="channel_warning">Kompatibilitätswarnungen</string><string name="notification_delete">🔴 Löschen</string><string name="notification_mark_read">✓ Gelesen</string>
-    <string name="mms_warning_title">MMS wird nicht unterstützt</string><string name="mms_warning_body">JX SMS Reader unterstützt derzeit nur normale SMS. Bitte zu einer MMS-fähigen Nachrichten-App wechseln.</string>
+    <string name="mms_warning_title">JX kann diese MMS nicht empfangen</string><string name="mms_warning_body">JX zeigt nur von Samsung Messages heruntergeladene MMS an und lädt oder speichert sie nicht selbst. Samsung Messages als Standard festlegen und um erneutes Senden bitten.</string>
     <string name="otp_inbox">Bestätigungscodes</string>
     <string name="otp_empty">Keine Nachrichten mit Bestätigungscodes</string>
     <string name="select_all">Alle auswählen</string>

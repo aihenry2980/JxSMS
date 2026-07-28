@@ -32,8 +32,22 @@ data class SmsMessageModel(
     val subscriptionId: Int?,
     val category: SmsCategory = SmsCategory.UNKNOWN,
     val contactName: String? = null,
-    val contactPhotoUri: Uri? = null
+    val contactPhotoUri: Uri? = null,
+    val transport: MessageTransport = MessageTransport.SMS,
+    val subject: String? = null,
+    val attachments: List<MmsAttachment> = emptyList()
 )
+
+enum class MessageTransport { SMS, MMS }
+
+data class MmsAttachment(
+    val partId: Long,
+    val contentUri: Uri,
+    val contentType: String,
+    val fileName: String?
+) {
+    val isImage: Boolean get() = contentType.startsWith("image/")
+}
 
 interface SmsDataSource {
     suspend fun inbox(): List<SmsMessageModel>
@@ -164,13 +178,16 @@ class AndroidSmsDataSource(
 class SmsRepository(
     private val resolver: ContentResolver,
     private val source: SmsDataSource,
+    private val mmsSource: MmsDataSource,
     private val classifier: SmsClassifier,
     private val contacts: com.example.jxsms.data.contacts.ContactRepository
 ) {
-    fun messages(): Flow<List<SmsMessageModel>> = observedMessages { source.inbox() }
+    fun messages(): Flow<List<SmsMessageModel>> = observedMessages {
+        source.inbox() + mmsSource.inbox()
+    }
 
     fun conversationMessages(): Flow<List<SmsMessageModel>> =
-        observedMessages { source.conversationMessages() }
+        observedMessages { source.conversationMessages() + mmsSource.conversationMessages() }
 
     suspend fun inboxSnapshot(): List<SmsMessageModel> = source.inbox().map { sms ->
         val contact = contacts.lookup(sms.address)
@@ -189,6 +206,7 @@ class SmsRepository(
             override fun onChange(selfChange: Boolean) { trySend(Unit) }
         }
         resolver.registerContentObserver(Telephony.Sms.CONTENT_URI, true, observer)
+        resolver.registerContentObserver(Telephony.Mms.CONTENT_URI, true, observer)
         trySend(Unit)
         awaitClose { resolver.unregisterContentObserver(observer) }
     }.conflate().mapLatest {
@@ -197,15 +215,25 @@ class SmsRepository(
             sms.copy(
                 contactName = contact?.displayName,
                 contactPhotoUri = contact?.photoUri,
-                category = classifier.classify(sms.address, sms.body, contact != null)
+                category = classifier.classify(
+                    sms.address,
+                    listOfNotNull(sms.subject, sms.body).joinToString("\n"),
+                    contact != null
+                )
             )
-        }
+        }.sortedByDescending(SmsMessageModel::date)
     }
 
-    suspend fun byId(id: Long): SmsMessageModel? = source.byId(id)?.let { sms ->
+    suspend fun byId(id: Long): SmsMessageModel? =
+        (if (MmsMessageIds.isMms(id)) mmsSource.byUiId(id) else source.byId(id))?.let { sms ->
         val contact = contacts.lookup(sms.address)
         sms.copy(contactName = contact?.displayName, contactPhotoUri = contact?.photoUri,
-            category = classifier.classify(sms.address, sms.body, contact != null))
+            category = classifier.classify(
+                sms.address,
+                listOfNotNull(sms.subject, sms.body).joinToString("\n"),
+                contact != null
+            ))
     }
-    suspend fun setRead(id: Long, read: Boolean) = source.setRead(id, read)
+    suspend fun setRead(id: Long, read: Boolean) =
+        if (MmsMessageIds.isMms(id)) false else source.setRead(id, read)
 }

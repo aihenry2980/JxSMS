@@ -29,13 +29,13 @@
     <string name="merge_sender">合併相同寄件者</string><string name="merge_on">Inbox 依寄件者合併為對話</string><string name="merge_off">每則 SMS 獨立顯示</string>
     <string name="left_swipe">向左滑動操作</string><string name="right_swipe">向右滑動操作</string>
     <string name="trash_retention">簡訊保留 30 天，每日自動清理</string><string name="sms_classification">簡訊分類</string><string name="classification_detail">使用離線、確定性的中韓英關鍵字規則</string>
-    <string name="tag_colors">標籤顏色</string><string name="mms_unsupported_setting">目前不支援 MMS、群組多媒體訊息和 RCS</string><string name="version">版本</string>
+    <string name="tag_colors">標籤顏色</string><string name="mms_unsupported_setting">可唯讀查看已下載 MMS；仍不支援 RCS</string><string name="version">版本</string>
     <string name="language">語言</string><string name="language_system">跟隨系統</string><string name="language_zh_cn">中文（簡體）</string><string name="language_zh_tw">中文（繁體）</string><string name="language_ja">日本語</string><string name="language_en">English</string><string name="language_ko">한국어</string><string name="language_de">Deutsch</string>
     <string name="choose_tag_color">選擇「%1$s」的顏色</string><string name="change_category">更改簡訊分類</string>
     <string name="color_deep_blue">深藍</string><string name="color_indigo">靛藍</string><string name="color_purple">紫色</string><string name="color_rose">玫紅</string><string name="color_red">紅色</string><string name="color_orange_brown">橙棕</string><string name="color_gold_brown">金棕</string><string name="color_green">綠色</string><string name="color_teal">青色</string><string name="color_dark_gray">深灰</string>
     <string name="unsupported_send">JX SMS Reader 不支援傳送簡訊。</string><string name="clipboard_label">簡訊內文</string>
     <string name="channel_sms">新簡訊</string><string name="channel_warning">相容性提醒</string><string name="notification_delete">🔴 刪除</string><string name="notification_mark_read">✓ 標為已讀</string>
-    <string name="mms_warning_title">暫不支援 MMS</string><string name="mms_warning_body">JX SMS Reader 目前只支援一般 SMS。請切換到支援 MMS 的簡訊應用程式查看此類訊息。</string>
+    <string name="mms_warning_title">JX 無法接收這則 MMS</string><string name="mms_warning_body">JX 只會顯示由 Samsung Messages 下載的 MMS，不會自行下載或儲存。請把 Samsung Messages 設為預設並請寄件者重傳。</string>
     <string name="otp_inbox">驗證碼彙總</string>
     <string name="otp_empty">沒有驗證碼簡訊</string>
     <string name="select_all">全選</string>

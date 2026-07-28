@@ -80,4 +80,10 @@
     <string name="continue_existing_backup">Vorhandene Sicherung fortsetzen</string>
     <string name="regenerate">Neu erstellen</string>
     <string name="choose_email_app">E-Mail-App auswählen</string>
+    <string name="mms_empty">Diese MMS enthält keinen darstellbaren Text oder Anhang</string>
+    <string name="mms_attachment_only">MMS-Anhang</string>
+    <string name="mms_subject">Betreff</string>
+    <string name="mms_attachments">Anhänge: %1$d</string>
+    <string name="mms_image_unavailable">Dieses MMS-Bild konnte nicht gelesen werden</string>
+    <string name="mms_non_image_attachment">JX zeigt derzeit nur Bildanhänge direkt an</string>
 </resources>
