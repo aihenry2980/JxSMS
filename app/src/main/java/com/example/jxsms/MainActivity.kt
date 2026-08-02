@@ -262,10 +262,18 @@ private fun InboxScreen(
     val deleteFailedText = stringResource(R.string.delete_failed)
     var query by rememberSaveable { mutableStateOf("") }
     var deleteConversation by remember { mutableStateOf<ConversationGroup?>(null) }
+    var optimisticallyHiddenIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
     val displayedMessages = if (prefs.mergeConversations) conversationMessages else messages
-    val filteredMessages = remember(displayedMessages, query) {
+    LaunchedEffect(displayedMessages) {
+        val currentIds = displayedMessages.asSequence().map(SmsMessageModel::id).toSet()
+        optimisticallyHiddenIds = optimisticallyHiddenIds.intersect(currentIds)
+    }
+    val visibleMessages = remember(displayedMessages, optimisticallyHiddenIds) {
+        displayedMessages.filterNot { it.id in optimisticallyHiddenIds }
+    }
+    val filteredMessages = remember(visibleMessages, query) {
         val term = query.trim()
-        if (term.isEmpty()) displayedMessages else displayedMessages.filter { sms ->
+        if (term.isEmpty()) visibleMessages else visibleMessages.filter { sms ->
             sms.address.contains(term, ignoreCase = true) ||
                 sms.contactName.orEmpty().contains(term, ignoreCase = true) ||
                 sms.body.contains(term, ignoreCase = true) ||
@@ -347,14 +355,20 @@ private fun InboxScreen(
                                 onAction = { action ->
                                     when (action) {
                                         SwipeAction.DELETE -> scope.launch {
+                                            optimisticallyHiddenIds += sms.id
                                             when (val result = vm.delete(sms.id)) {
                                                 is TrashResult.Success -> {
                                                     val undo = snack.showSnackbar(movedText, undoText)
                                                     if (undo == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                                                        if (!vm.restore(result.trashId)) snack.showSnackbar(restoreFailedText)
+                                                        if (!vm.restore(result.trashId)) {
+                                                            snack.showSnackbar(restoreFailedText)
+                                                        }
                                                     }
                                                 }
-                                                is TrashResult.Failure -> snack.showSnackbar(deleteFailedText)
+                                                is TrashResult.Failure -> {
+                                                    optimisticallyHiddenIds -= sms.id
+                                                    snack.showSnackbar(deleteFailedText)
+                                                }
                                             }
                                         }
                                         SwipeAction.MARK_READ_UNREAD -> vm.markRead(sms.id, !sms.read)
@@ -378,13 +392,17 @@ private fun InboxScreen(
             onDismiss = { deleteConversation = null },
             onConfirm = {
                 deleteConversation = null
+                optimisticallyHiddenIds += conversation.messages.map(SmsMessageModel::id)
                 scope.launch {
                     val trashIds = mutableListOf<Long>()
                     var failed = 0
                     conversation.messages.forEach { sms ->
                         when (val result = vm.delete(sms.id)) {
                             is TrashResult.Success -> trashIds += result.trashId
-                            is TrashResult.Failure -> failed++
+                            is TrashResult.Failure -> {
+                                failed++
+                                optimisticallyHiddenIds -= sms.id
+                            }
                         }
                     }
                     val message = if (failed == 0) {
